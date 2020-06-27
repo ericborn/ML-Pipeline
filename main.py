@@ -69,12 +69,77 @@ print('The total length of the dataframe is', main_df.shape[0], 'rows',
       'and the width is', main_df.shape[1], 'columns')
 
 # create a class label using 0 or 1 to indicate winning team
-# 0 = team 1 won
-# 1 = team 2 won
-main_df['Churn'] = main_df['Churn'].apply(lambda x: 0 if x == 'Yes' else 0)
+# 0 = no churn
+# 1 = churn
+main_df['Churn'] = main_df['Churn'].apply(lambda x: 1 if x == 'Yes' else 0)
 
-# remove columns gameId, creationTime, seasonId and winner
-main_df.drop(main_df.columns[[0,1,3,4]], axis = 1, inplace = True)
+# Create an area code column out of the ServiceArea column
+main_df['AreaCode'] = main_df['ServiceArea'].str[-3:]
+
+main_df['ChildrenInHH'] = main_df['ChildrenInHH'].apply(lambda x: 1 \
+                                                        if x == 'Yes' else 0)
+
+main_df['HandsetRefurbished'] = main_df['HandsetRefurbished'].apply(lambda x: \
+                                                        1 if x == 'Yes' else 0)
+
+main_df['HandsetWebCapable'] = main_df['HandsetWebCapable'].apply(lambda x: \
+                                                        1 if x == 'Yes' else 0)
+
+main_df['TruckOwner'] = main_df['TruckOwner'].apply(lambda x: 1\
+                                                    if x == 'Yes' else 0)
+
+main_df['RVOwner'] = main_df['RVOwner'].apply(lambda x: 1\
+                                                    if x == 'Yes' else 0)
+
+main_df['Homeownership'] = main_df['Homeownership'].apply(lambda x: 1\
+                                                    if x == 'Known' else 0)
+
+main_df['BuysViaMailOrder'] = main_df['BuysViaMailOrder'].apply(lambda x: 1\
+                                                    if x == 'Yes' else 0)
+
+main_df['RespondsToMailOffers'] = main_df['RespondsToMailOffers'].apply(\
+                                                                  lambda x: 1\
+                                                          if x == 'Yes' else 0)
+main_df['OptOutMailings'] = main_df['OptOutMailings'].apply(lambda x: 1\
+                                                    if x == 'Yes' else 0)
+
+
+
+
+NonUSTravel
+OwnsComputer
+HasCreditCard
+NewCellphoneUser
+NotNewCellphoneUser
+OwnsMotorcycle
+MadeCallToRetentionTeam
+
+# 1-Highest
+# 2-High
+# 3-Good
+# 4-Medium
+# 5-Low
+# 6-VeryLow
+CreditRating
+
+# Town = 1
+# Suburban = 2
+# Rural = 3
+# Other = 4
+PrizmCode
+
+Occupation
+# Clerical = 1
+# Crafts = 2
+# Homemaker = 3
+# Other = 4
+# Professional = 5
+# Retired = 6
+# Self = 7
+# Student = 8
+
+# remove columns customerId and ServiceArea
+main_df.drop(main_df.columns[[0,26]], axis = 1, inplace = True)
 
 ## write modified data to csv
 ## desired csv filename
@@ -92,14 +157,14 @@ main_df.drop(main_df.columns[[0,1,3,4]], axis = 1, inplace = True)
 # view row 89, all columns
 #main_df.iloc[89,:]
 
-# 58 columns remaining
+# 57 columns remaining
 print(main_df.head())
 
-# x stores all columns except for the win column
-main_x = main_df.drop('win', 1)
+# x stores all columns except for the Churn column
+main_x = main_df.drop('Churn', 1)
 
-# y stores only the win column since its used as a predictor
-main_y = main_df['win']
+# y stores only the Churn column since its used as a predictor
+main_y = main_df['Churn']
 
 # setup empty list to store all of the models accuracy
 global_accuracy = []
@@ -125,64 +190,25 @@ timings_list.append(['Features selection duration:', time.time()])
 cor = main_df.corr()
 
 # correlation with output variable
-cor_target = abs(cor['win'])
+cor_target = abs(cor['Churn'])
 
 # selecting features correlated greater than 0.5
-relevant_features_five = cor_target[cor_target > 0.5]
+relevant_features = cor_target[cor_target > 0.1]
 
-# second set of features correlated greater than 0.35
-relevant_features_ten = cor_target[cor_target > 0.35]
-
-# create dataframe top 5 correlated attributes
-#pear_five_df = main_df[['firstInhibitor', 't1_towerKills', 't1_inhibitorKills', 
-#                      't2_towerKills', 't2_inhibitorKills']]
-
-pear_five_df = main_df[['t2_towerKills', 't1_inhibitorKills']]
-
-# create dataframe top 10 correlated attributes
-pear_ten_df = main_df[['firstTower','firstInhibitor', 't1_towerKills',
-                       't1_inhibitorKills', 't1_baronKills', 't1_dragonKills',
-                       't2_towerKills', 't2_inhibitorKills', 't2_baronKills',
-                       't2_dragonKills']]
+# create a dataframe from the highest correlated item
+pearsons_df = main_df[['CurrentEquipmentDays']]
 
 #########################
 # results for the top 5 and top 10 attributes
-print('Pearsons top 5 attributes:')
-print(list(pear_five_df.columns), '\n')
+print('Pearsons top attribute:')
+print(list(pearsons_df.columns), '\n')
 
 # Create correlation matrix for > 0.5 correlation
 fig = plt.figure(figsize=(10,10))
-sns.heatmap(main_df[['win','firstInhibitor', 't1_towerKills', 
-                    't1_inhibitorKills', 't2_towerKills', 
-                    't2_inhibitorKills']].corr(), 
+sns.heatmap(main_df[['Churn', 'CurrentEquipmentDays']].corr(), 
             annot=True, vmin=-1, vmax=1, center=0, cmap="coolwarm", fmt='.2f',
             linewidths=2, linecolor='black')
 plt.title('Correlation matrix for > 0.5 correlation', y=1.1)
-
-# Create correlation matrix for > 0.5 correlation
-fig = plt.figure(figsize=(10,10))
-sns.heatmap(main_df[['win', 't2_towerKills', 't1_inhibitorKills']].corr(), 
-            annot=True, vmin=-1, vmax=1, center=0, cmap="coolwarm", fmt='.2f',
-            linewidths=2, linecolor='black')
-plt.title('Correlation matrix for > 0.5 correlation', y=1.1)
-
-##################
-print('Pearsons top 10 attributes:')
-print(list(pear_ten_df.columns), '\n')
-
-# Create correlation matrix for > 0.35 correlation
-fig = plt.figure(figsize=(10,10))
-sns.heatmap(main_df[['win', 'firstTower','firstInhibitor', 't1_towerKills',
-                    't1_inhibitorKills', 't1_baronKills', 't1_dragonKills',
-                    't2_towerKills', 't2_inhibitorKills', 't2_baronKills',
-                    't2_dragonKills']].corr(), annot=True, vmin=-1,
-            vmax=1, center=0, cmap="coolwarm", fmt='.2f', linewidths=2, 
-            linecolor='black')
-plt.title('Correlation matrix for > 0.35 correlation' , y=1.1)
-
-#######
-# End Pearsons corerelation
-#######
 
 #######
 # Start Ordinary Least Squares
