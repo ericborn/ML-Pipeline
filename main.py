@@ -76,6 +76,7 @@ main_df['Churn'] = main_df['Churn'].apply(lambda x: 1 if x == 'Yes' else 0)
 # Create an area code column out of the ServiceArea column
 main_df['AreaCode'] = main_df['ServiceArea'].str[-3:]
 
+# convery categorical data to numerical
 main_df['ChildrenInHH'] = main_df['ChildrenInHH'].apply(lambda x: 1 \
                                                         if x == 'Yes' else 0)
 
@@ -100,35 +101,53 @@ main_df['BuysViaMailOrder'] = main_df['BuysViaMailOrder'].apply(lambda x: 1\
 main_df['RespondsToMailOffers'] = main_df['RespondsToMailOffers'].apply(\
                                                                   lambda x: 1\
                                                           if x == 'Yes' else 0)
+
 main_df['OptOutMailings'] = main_df['OptOutMailings'].apply(lambda x: 1\
                                                     if x == 'Yes' else 0)
 
+main_df['NonUSTravel'] = main_df['NonUSTravel'].apply(lambda x: 1\
+                                                    if x == 'Yes' else 0)
 
+main_df['OwnsComputer'] = main_df['OwnsComputer'].apply(lambda x: 1\
+                                                    if x == 'Yes' else 0)
 
+main_df['HasCreditCard'] = main_df['HasCreditCard'].apply(lambda x: 1\
+                                                    if x == 'Yes' else 0)
 
-NonUSTravel
-OwnsComputer
-HasCreditCard
-NewCellphoneUser
-NotNewCellphoneUser
-OwnsMotorcycle
-MadeCallToRetentionTeam
+main_df['NewCellphoneUser'] = main_df['NewCellphoneUser'].apply(lambda x: 1\
+                                                    if x == 'Yes' else 0)
 
+main_df['NotNewCellphoneUser'] = main_df['NotNewCellphoneUser'].apply(
+                                              lambda x: 1 if x == 'Yes' else 0)
+
+main_df['OwnsMotorcycle'] = main_df['OwnsMotorcycle'].apply(lambda x: 1\
+                                                    if x == 'Yes' else 0)
+
+main_df['MadeCallToRetentionTeam'] = main_df['MadeCallToRetentionTeam'].apply(\
+                                              lambda x: 1 if x == 'Yes' else 0)
+  
+main_df.loc[main_df['HandsetPrice'] == 'Unknown', 'HandsetPrice'] = 0
+                                              
 # 1-Highest
 # 2-High
 # 3-Good
 # 4-Medium
 # 5-Low
 # 6-VeryLow
-CreditRating
+# 7-Lowest
+main_df['CreditRating'] = main_df['CreditRating'].str[:1]
+
 
 # Town = 1
 # Suburban = 2
 # Rural = 3
 # Other = 4
-PrizmCode
+main_df.loc[main_df['PrizmCode'] == 'Town', 'PrizmCode'] = 1
+main_df.loc[main_df['PrizmCode'] == 'Suburban', 'PrizmCode'] = 2
+main_df.loc[main_df['PrizmCode'] == 'Rural', 'PrizmCode'] = 3
+main_df.loc[main_df['PrizmCode'] == 'Other', 'PrizmCode'] = 4
 
-Occupation
+
 # Clerical = 1
 # Crafts = 2
 # Homemaker = 3
@@ -137,6 +156,30 @@ Occupation
 # Retired = 6
 # Self = 7
 # Student = 8
+main_df.loc[main_df['Occupation'] == 'Clerical', 'Occupation'] = 1
+main_df.loc[main_df['Occupation'] == 'Crafts', 'Occupation'] = 2
+main_df.loc[main_df['Occupation'] == 'Homemaker', 'Occupation'] = 3
+main_df.loc[main_df['Occupation'] == 'Other', 'Occupation'] = 4
+main_df.loc[main_df['Occupation'] == 'Professional', 'Occupation'] = 5
+main_df.loc[main_df['Occupation'] == 'Retired', 'Occupation'] = 6
+main_df.loc[main_df['Occupation'] == 'Self', 'Occupation'] = 7
+main_df.loc[main_df['Occupation'] == 'Student', 'Occupation'] = 8
+
+# yes = 1
+# no = 2
+# unknown = 3
+main_df.loc[main_df['MaritalStatus'] == 'Yes', 'MaritalStatus'] = 1
+main_df.loc[main_df['MaritalStatus'] == 'No', 'MaritalStatus'] = 2
+main_df.loc[main_df['MaritalStatus'] == 'Unknown', 'MaritalStatus'] = 3
+
+# replaces all NaN with 0
+main_df = main_df.fillna(0)
+
+# convert object dtypes to int
+main_df['HandsetPrice'] = main_df['HandsetPrice'].astype('int64')
+main_df['CreditRating'] = main_df['CreditRating'].astype('int64')
+main_df['AreaCode'] = main_df['AreaCode'].astype('int64')
+
 
 # remove columns customerId and ServiceArea
 main_df.drop(main_df.columns[[0,26]], axis = 1, inplace = True)
@@ -162,6 +205,9 @@ print(main_df.head())
 
 # x stores all columns except for the Churn column
 main_x = main_df.drop('Churn', 1)
+
+# replaces all NaN with 0
+main_x = main_x.fillna(0)
 
 # y stores only the Churn column since its used as a predictor
 main_y = main_df['Churn']
@@ -214,6 +260,8 @@ plt.title('Correlation matrix for > 0.5 correlation', y=1.1)
 # Start Ordinary Least Squares
 #######
 
+
+
 # creates a list of column names
 cols = list(main_x.columns)
 # sets a max value
@@ -223,6 +271,15 @@ pmax = 1
 # OLS model and eliminiates the highest value from the list of columns
 # loop breaks if all columns remaining have less than 0.05 p value
 # or all columns are removed
+
+main_x.dtypes
+
+main_x
+
+main_x[cols[-1]] = main_x[cols[-1]].astype('int64')
+
+sm.add_constant(main_x[cols].values)
+
 try:
     while (len(cols)>0):
         p = []
