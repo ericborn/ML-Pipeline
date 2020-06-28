@@ -36,8 +36,8 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LassoCV, LogisticRegression, LinearRegression
-from sklearn.metrics import confusion_matrix, recall_score,\
-                            classification_report, roc_curve, auc
+from sklearn.metrics import confusion_matrix, recall_score, roc_curve, auc,\
+                            classification_report, roc_auc_score
 
 # Set display options for pandas
 #pd.set_option('display.max_rows', 100)
@@ -246,20 +246,20 @@ global_accuracy = []
 # end timing
 timings_list.append(['clean time end', time.time()])
 
-def plot_churn_values(main_df, column=''):
-    plt.figure(figsize=(7,7))
-    plt.grid(True)
-    plt.bar(main_df[column][main_df.Churn==1].value_counts().index, 
-            main_df[column][main_df.Churn==1].value_counts().values)
-    plt.title(f'{column}')
-    plt.xticks(rotation=-90)
-
-plot_churn_values(main_df, column='CreditRating')
+# plot churn sliced by credit raiting
+#def plot_churn_values(main_df, column=''):
+#    plt.figure(figsize=(7,7))
+#    plt.grid(True)
+#    plt.bar(main_df[column][main_df.Churn==1].value_counts().index, 
+#            main_df[column][main_df.Churn==1].value_counts().values)
+#    plt.title(f'{column}')
+#    plt.xticks(rotation=-90)
+#
+#plot_churn_values(main_df, column='CreditRating')
 
 ################
 # End data import and cleanup
 ################
-
 
 # creates a list of column names
 cols = list(main_x.columns)
@@ -275,7 +275,7 @@ main_x_scaled[cols[0:29]] = scaler.fit_transform(main_x_scaled[cols[0:29]])
 (main_scaled_df_train_x, main_scaled_df_test_x, 
  main_scaled_df_train_y, main_scaled_df_test_y) = (
         train_test_split(main_x_scaled, main_y, test_size = 0.333, 
-                         random_state=1337))
+                         random_state = 1337))
 
 ################
 # Start LGBM
@@ -286,10 +286,9 @@ main_x_scaled[cols[0:29]] = scaler.fit_transform(main_x_scaled[cols[0:29]])
 # setup lgb training and test datasets
 lgb_train = lgb.Dataset(main_scaled_df_train_x, main_scaled_df_train_y, \
                         free_raw_data=False)
+
 lgb_test = lgb.Dataset(main_scaled_df_test_x, main_scaled_df_test_y, \
                       reference=lgb_train, free_raw_data=False)
-
-
 
 # set parameters to be used for LGB
 # gradient boosted decision tree
@@ -309,32 +308,54 @@ core_params = {
 
 advanced_params = {
     'boosting_type': 'gbdt',
-    'objective': 'binary',
+    'objective': 'xentropy',
     'metric': 'auc',
     
     'learning_rate': 0.01,
-    'num_leaves': 100, # more leaves increases accuracy, but may lead to overfitting.
+    # more leaves increases accuracy, but may lead to overfitting
+    'num_leaves': 100,
     
-    'max_depth': 10, # the maximum tree depth. Shallower trees reduce overfitting.
-    'min_split_gain': 0, # minimal loss gain to perform a split
-    'min_child_samples': 21, # or min_data_in_leaf: specifies the minimum samples per leaf node.
-    'min_child_weight': 5, # minimal sum hessian in one leaf. Controls overfitting.
+    # the maximum tree depth. Shallower trees reduce overfitting.
+    'max_depth': 10,
+
+    # minimal loss gain to perform a split
+    'min_split_gain': 0,
+
+    # or min_data_in_leaf: specifies the minimum samples per leaf node.
+    'min_child_samples': 21,
+
+    # minimal sum hessian in one leaf. Controls overfitting.
+    'min_child_weight': 5,
+
+    # L1 and L2 regularization
+    'lambda_l1': 0.5, 
+    'lambda_l2': 0.5,
     
-    'lambda_l1': 0.5, # L1 regularization
-    'lambda_l2': 0.5, # L2 regularization
+    # randomly select a fraction of the features before building each tree.
+    'feature_fraction': 0.5, 
     
-    'feature_fraction': 0.5, # randomly select a fraction of the features before building each tree.
     # Speeds up training and controls overfitting.
-    'bagging_fraction': 0.5, # allows for bagging or subsampling of data to speed up training.
-    'bagging_freq': 0, # perform bagging on every Kth iteration, disabled if 0.
+    # allows for bagging or subsampling of data to speed up training.
+    'bagging_fraction': 0.5,
     
-    'scale_pos_weight': 99, # add a weight to the positive class examples (compensates for imbalance).
+    # perform bagging on every Kth iteration, disabled if 0.
+    'bagging_freq': 0,
     
-    'subsample_for_bin': 200000, # amount of data to sample to determine histogram bins
-    'max_bin': 1000, # the maximum number of bins to bucket feature values in.
-    # LightGBM autocompresses memory based on this value. Larger bins improves accuracy.
+    # add a weight to the positive class examples (compensates for imbalance).
+    'scale_pos_weight': 99, 
     
-    'nthread': 6, # number of threads to use for LightGBM, best set to number of actual cores.
+    # amount of data to sample to determine histogram bins
+    'subsample_for_bin': 200000,
+    
+    # the maximum number of bins to bucket feature values in.
+    # LightGBM autocompresses memory based on this value. 
+    # Larger bins improves accuracy.
+    'max_bin': 1000, 
+    
+    
+    # number of threads to use for LightGBM, 
+    # best set to number of actual cores.
+    'nthread': 6,
 }
 
 # create a gradient boosted decision tree using LGBM
@@ -373,20 +394,67 @@ model, evals = train_gbm(core_params, lgb_train, lgb_test)
 model, evals = train_gbm(advanced_params, lgb_train, lgb_test, \
                          boost_rounds = 1000)
 
+# predicted value of y
+model_pred_y = model.predict(main_scaled_df_test_x)
 
+model_test_results = pd.DataFrame({'trueValue': main_scaled_df_test_y, \
+                                   'predictedValue': model_pred_y})
 
+(model_test_results.predictedValue[model_test_results.trueValue == 0].shape[0],
+model_test_results.predictedValue[model_test_results.trueValue == 1].shape[0])
 
+roc_auc_score(model_test_results.trueValue, model_test_results.predictedValue)
 
+# build another advanced model based on the first model
+model, evals = train_gbm(advanced_params, lgb_train, lgb_test, \
+                         init_gbm=model, boost_rounds = 1000)
+# save model to txt file
+#model.save_model('cell_churn.txt')
 
+model_test_results = pd.DataFrame({'trueValue': main_scaled_df_test_y, \
+                                   'predictedValue': model_pred_y})
 
+(model_test_results.predictedValue[model_test_results.trueValue == 0].shape[0],
+model_test_results.predictedValue[model_test_results.trueValue == 1].shape[0])
 
+roc_auc_score(model_test_results.trueValue, model_test_results.predictedValue)
+  
 
+############
+## End building gbm model
+############
 
+####
+# setup some plots
+####
 
+# plot feature importance, has too many features to be useful
+#lgb.plot_importance(model)
 
+# create feature importance dictionary
+feat_importance = {}
+for feat in range(len(model.feature_importance())):
+    feat_importance.update({model.feature_name()[feat] : \
+                            model.feature_importance()[feat]})
 
+# sort dict from largest to smallest
+feat_importance = {k: v for k, v in sorted(feat_importance.items(), \
+                                           key=lambda item: item[1], \
+                                           reverse = True)}   
 
+# create a top 10 list of features
+feat_importance_ten = {}
+for i in range(10):
+    feat_importance_ten.update({list(feat_importance.keys())[i] : \
+                               (list(feat_importance.values())[i])})
 
+# Create feature important plot 
+sns.barplot(y=list(feat_importance_ten.keys()), \
+            x=list(feat_importance_ten.values()), palette='Blues_d')
+ax.xaxis.set_label_position("top")
+plt.title('Feature Importance')
+plt.ylabel('Features')
+plt.xlabel('Importance Value')
 
 ################
 # Start attribute selection with various methods
