@@ -9,8 +9,9 @@ Created on Sat Jun 27 13:13:22 2020
 """
 Eric Born
 Date: 12 Aug 2019
-Predicting the winning team in the video game League of Legends
+Predicting churn in telcom data
 utilizing various machine learning algorithms
+https://www.kaggle.com/jpacse/datasets-for-churn-telecom
 """
 
 import os
@@ -68,7 +69,7 @@ except Exception as e:
 print('The total length of the dataframe is', main_df.shape[0], 'rows',
       'and the width is', main_df.shape[1], 'columns')
 
-# create a class label using 0 or 1 to indicate winning team
+# create a class label using 0 or 1 to indicate churnning team
 # 0 = no churn
 # 1 = churn
 main_df['Churn'] = main_df['Churn'].apply(lambda x: 1 if x == 'Yes' else 0)
@@ -207,7 +208,7 @@ print(main_df.head())
 main_x = main_df.drop('Churn', 1)
 
 # replaces all NaN with 0
-main_x = main_x.fillna(0)
+#main_x = main_x.fillna(0)
 
 # y stores only the Churn column since its used as a predictor
 main_y = main_df['Churn']
@@ -260,8 +261,6 @@ plt.title('Correlation matrix for > 0.5 correlation', y=1.1)
 # Start Ordinary Least Squares
 #######
 
-
-
 # creates a list of column names
 cols = list(main_x.columns)
 # sets a max value
@@ -271,15 +270,6 @@ pmax = 1
 # OLS model and eliminiates the highest value from the list of columns
 # loop breaks if all columns remaining have less than 0.05 p value
 # or all columns are removed
-
-main_x.dtypes
-
-main_x
-
-main_x[cols[-1]] = main_x[cols[-1]].astype('int64')
-
-sm.add_constant(main_x[cols].values)
-
 try:
     while (len(cols)>0):
         p = []
@@ -315,30 +305,30 @@ ols_df = main_df[selected_features_BE]
 # only used to determine optimum number of attributes
 #####
 
-## Total number of features
-#nof_list = np.arange(1,58)            
-#high_score = 0
-#
-## Variable to store the optimum features
-#nof = 0           
-#score_list = []
-#for n in range(len(nof_list)):
-#    X_train, X_test, y_train, y_test = train_test_split(main_x, main_y, 
-#                                            test_size = 0.3, random_state = 0)
-#    model = LinearRegression()
-#    rfe = RFE(model,nof_list[n])
-#    X_train_rfe = rfe.fit_transform(X_train,y_train)
-#    X_test_rfe = rfe.transform(X_test)
-#    model.fit(X_train_rfe,y_train)
-#    score = model.score(X_test_rfe,y_test)
-#    score_list.append(score)
-#    if(score > high_score):
-#        high_score = score
-#        nof = nof_list[n]
-#
-## 39 features score of 0.793475
-#print("Optimum number of features: %d" %nof)
-#print("Score with %d features: %f" % (nof, high_score))
+# Total number of features
+nof_list = np.arange(1,57)            
+high_score = 0
+
+# Variable to store the optimum features
+nof = 0           
+score_list = []
+for n in range(len(nof_list)):
+    X_train, X_test, y_train, y_test = train_test_split(main_x, main_y, 
+                                            test_size = 0.3, random_state = 0)
+    model = LinearRegression()
+    rfe = RFE(model,nof_list[n])
+    X_train_rfe = rfe.fit_transform(X_train,y_train)
+    X_test_rfe = rfe.transform(X_test)
+    model.fit(X_train_rfe,y_train)
+    score = model.score(X_test_rfe,y_test)
+    score_list.append(score)
+    if(score > high_score):
+        high_score = score
+        nof = nof_list[n]
+
+# 55 features score of 0.033387
+print("Optimum number of features: %d" %nof)
+print("Score with %d features: %f" % (nof, high_score))
 
 #####
 # only used to determine optimum number of attributes
@@ -348,8 +338,8 @@ ols_df = main_df[selected_features_BE]
 cols = list(main_x.columns)
 model = LinearRegression()
 
-#Initializing RFE model with 39 features
-rfe = RFE(model, 39)   
+#Initializing RFE model with 55 features
+rfe = RFE(model, 55)   
           
 #Transforming data using RFE
 X_rfe = rfe.fit_transform(main_x,main_y)  
@@ -416,8 +406,7 @@ lasso_df.mean()
 full_feature_list = []
 
 # append the columns from each feature selection
-full_feature_list.append(list(pear_five_df.columns))
-full_feature_list.append(list(pear_ten_df.columns))
+full_feature_list.append(list(pearsons_df.columns))
 full_feature_list.append(list(ols_df.columns))
 full_feature_list.append(list(rfe_df.columns))
 full_feature_list.append(list(lasso_df.columns))
@@ -451,35 +440,19 @@ timings_list.append(['Dataframe build duration:', time.time()])
 
 # Setup scalers X datasets
 scaler = StandardScaler()
-scaler.fit(pear_five_df)
-pear_five_df_scaled = scaler.transform(pear_five_df)
+scaler.fit(pearsons_df)
+pearsons_df_scaled = scaler.transform(pearsons_df)
 
 # pear_five split dataset into 33% test 66% training
-(pear_five_scaled_df_train_x, pear_five_scaled_df_test_x, 
- pear_five_scaled_df_train_y, pear_five_scaled_df_test_y) = (
-        train_test_split(pear_five_df_scaled, main_y, test_size = 0.333, 
+(pearsons_scaled_df_train_x, pearsons_scaled_df_test_x, 
+ pearsons_scaled_df_train_y, pearsons_scaled_df_test_y) = (
+        train_test_split(pearsons_df_scaled, main_y, test_size = 0.333, 
                          random_state=1337))
 
-#pear_five_scaled_df_train_x
-#pear_five_scaled_df_test_x
-#pear_five_scaled_df_train_y
-#pear_five_scaled_df_test_y
-
-# Setup scalers X dataset
-scaler = StandardScaler()
-scaler.fit(pear_ten_df)
-pear_ten_df_scaled = scaler.transform(pear_ten_df)
-
-# pear_ten split dataset into 33% test 66% training
-(pear_ten_scaled_df_train_x, pear_ten_scaled_df_test_x,
- pear_ten_scaled_df_train_y, pear_ten_scaled_df_test_y) = (
-        train_test_split(pear_ten_df_scaled, main_y, test_size = 0.333, 
-                         random_state=1337))
-
-#pear_ten_scaled_df_train_x
-#pear_ten_scaled_df_test_x
-#pear_ten_scaled_df_train_y
-#pear_ten_scaled_df_test_y
+#pearsons_scaled_df_train_x
+#pearsons_scaled_df_test_x
+#pearsons_scaled_df_train_y
+#pearsons_scaled_df_test_y
 
 # Setup scalers X dataset
 scaler = StandardScaler()
@@ -519,7 +492,7 @@ lasso_df_scaled = scaler.transform(lasso_df)
 
 # lasso split dataset into 33% test 66% training
 (lasso_scaled_df_train_x, lasso_scaled_df_test_x, lasso_scaled_df_train_y, 
-lasso_scaled_df_test_y) = (train_test_split(lasso_df_scaled, main_y, 
+ lasso_scaled_df_test_y) = (train_test_split(lasso_df_scaled, main_y, 
                                              test_size = 0.333, 
                                              random_state=1337))
 #lasso_scaled_df_train_x
@@ -536,33 +509,22 @@ lasso_scaled_df_test_y) = (train_test_split(lasso_df_scaled, main_y,
 ################
 
 # dataframes with selected attribtues from 5 methods for attribute eliminiation
-#pear_five_df
+#pearsons_df
 #pear_ten_df
 #ols_df
 #rfe_df
 #lasso_df
 
 # pear_five split dataset into 33% test 66% training
-(pear_five_df_train_x, pear_five_df_test_x, 
-pear_five_df_train_y, pear_five_df_test_y) = (
-        train_test_split(pear_five_df, main_y, test_size = 0.333, 
+(pearsons_df_train_x, pearsons_df_test_x, 
+ pearsons_df_train_y, pearsons_df_test_y) = (
+        train_test_split(pearsons_df, main_y, test_size = 0.333, 
                          random_state=1337))
 
-#pear_five_df_train_x
-#pear_five_df_test_x
-#pear_five_df_train_y
-#pear_five_df_test_y
-
-# pear_ten split dataset into 33% test 66% training
-(pear_ten_df_train_x, pear_ten_df_test_x, 
- pear_ten_df_train_y, pear_ten_df_test_y) = (
-        train_test_split(pear_ten_df, main_y, test_size = 0.333, 
-                         random_state=1337))
-
-#pear_ten_df_train_x
-#pear_ten_df_test_x
-#pear_ten_df_train_y
-#pear_ten_df_test_y
+#pearsons_df_train_x
+#pearsons_df_test_x
+#pearsons_df_train_y
+#pearsons_df_test_y
 
 # ols_df split dataset into 33% test 66% training
 ols_df_train_x, ols_df_test_x, ols_df_train_y, ols_df_test_y = (
@@ -612,79 +574,70 @@ timings_list.append(['frame build time end', time.time()])
 ################
 
 ########
-# Start counts of the win totals for team 1 and team 2
+# Start counts of the churn totals
 ########
 
-# store wins in variable for team 1
-team1 = sum(main_df.win == 0)
-pear_five_train_team1 = sum(pear_five_df_train_y == 0)
-pear_five_test_team1  = sum(pear_five_df_test_y  == 0)
-pear_ten_train_team1  = sum(pear_ten_df_train_y  == 0)
-pear_ten_test_team1   = sum(pear_ten_df_test_y   == 0)
-ols_train_team1       = sum(ols_df_train_y       == 0)
-ols_test_team1        = sum(ols_df_test_y        == 0)
-rfe_train_team1       = sum(rfe_df_train_y       == 0)
-rfe_test_team1        = sum(rfe_df_test_y        == 0)
-lasso_train_team1     = sum(lasso_df_train_y     == 0)
-lasso_test_team1      = sum(lasso_df_test_y      == 0)
+# store number in variable for churn
+churn = sum(main_df.Churn == 1)
+pearsons_train_churn = sum(pearsons_df_train_y == 1)
+pearsons_test_churn  = sum(pearsons_df_test_y  == 1)
+ols_train_churn       = sum(ols_df_train_y       == 1)
+ols_test_churn        = sum(ols_df_test_y        == 1)
+rfe_train_churn       = sum(rfe_df_train_y       == 1)
+rfe_test_churn        = sum(rfe_df_test_y        == 1)
+lasso_train_churn     = sum(lasso_df_train_y     == 1)
+lasso_test_churn      = sum(lasso_df_test_y      == 1)
 
-# store wins in variable for team 2
-team2 = sum(main_df.win == 1)
-pear_five_train_team2 = sum(pear_five_df_train_y == 1)
-pear_five_test_team2  = sum(pear_five_df_test_y  == 1)
-pear_ten_train_team2  = sum(pear_ten_df_train_y  == 1)
-pear_ten_test_team2   = sum(pear_ten_df_test_y   == 1)
-ols_train_team2       = sum(ols_df_train_y       == 1)
-ols_test_team2        = sum(ols_df_test_y        == 1)
-rfe_train_team2       = sum(rfe_df_train_y       == 1)
-rfe_test_team2        = sum(rfe_df_test_y        == 1)
-lasso_train_team2     = sum(lasso_df_train_y     == 1)
-lasso_test_team2      = sum(lasso_df_test_y      == 1)
+# store number in variable for no churn
+no_churn = sum(main_df.Churn == 0)
+pearsons_train_no_churn = sum(pearsons_df_train_y == 0)
+pearsons_test_no_churn  = sum(pearsons_df_test_y  == 0)
+ols_train_no_churn       = sum(ols_df_train_y       == 0)
+ols_test_no_churn        = sum(ols_df_test_y        == 0)
+rfe_train_no_churn       = sum(rfe_df_train_y       == 0)
+rfe_test_no_churn        = sum(rfe_df_test_y        == 0)
+lasso_train_no_churn     = sum(lasso_df_train_y     == 0)
+lasso_test_no_churn      = sum(lasso_df_test_y      == 0)
 
-# create a ratio of the wins
-ratio = round(team1 / team2, 4)
+# create a ratio of the churns
+ratio = round(churn / no_churn, 4)
 
-pear_five_train_ratio = round(pear_five_train_team1 / pear_five_train_team2, 4)
-pear_five_test_ratio  = round(pear_five_test_team1 / pear_five_test_team2, 4)
+pear_five_train_ratio = round(pearsons_train_churn / \
+                              pearsons_train_no_churn, 4)
+pear_five_test_ratio  = round(pearsons_test_churn / \
+                              pearsons_test_no_churn, 4)
 
-pear_ten_train_ratio = round(pear_five_train_team1 / pear_five_train_team2, 4)
-pear_ten_test_ratio  = round(pear_five_test_team1 / pear_five_test_team2, 4)
+ols_train_ratio = round(ols_train_churn / ols_train_no_churn, 4)
+ols_test_ratio  = round(ols_test_churn / ols_test_no_churn, 4)
 
-ols_train_ratio = round(ols_train_team1 / ols_train_team2, 4)
-ols_test_ratio  = round(ols_test_team1 / ols_test_team2, 4)
+rfe_train_ratio = round(rfe_train_churn / rfe_train_no_churn, 4)
+rfe_test_ratio  = round(rfe_test_churn / rfe_test_no_churn, 4)
 
-rfe_train_ratio = round(rfe_train_team1 / rfe_train_team2, 4)
-rfe_test_ratio  = round(rfe_test_team1 / rfe_test_team2, 4)
+lasso_train_ratio = round(lasso_train_churn / lasso_train_no_churn, 4)
+lasso_test_ratio  = round(lasso_test_churn / lasso_test_no_churn, 4)
 
-lasso_train_ratio = round(lasso_train_team1 / lasso_train_team2, 4)
-lasso_test_ratio  = round(lasso_test_team1 / lasso_test_team2, 4)
-
-# Print win ratios
-print('\nOriginal dataset win ratios\n','team 1 : team 2\n', str(ratio)+
+# Print churn ratios
+print('\nOriginal dataset churn ratios\n','churn : no churn\n', str(ratio)+
       ' :   1')
-print('\nPearson five training win ratios\n','team 1 : team 2\n', 
+print('\nPearson five training churn ratios\n','churn : no churn\n', 
       str(pear_five_train_ratio)+' :   1')
-print('\nPearson five test win ratios\n','team 1 : team 2\n', 
+print('\nPearson five test churn ratios\n','churn : no churn\n', 
       str(pear_five_test_ratio)+' :   1')
-print('\nPearson ten training win ratios\n','team 1 : team 2\n', 
-      str(pear_ten_train_ratio)+' :   1')
-print('\nPearson ten test win ratios\n','team 1 : team 2\n', 
-      str(pear_ten_test_ratio)+' :   1')
-print('\nOls training win ratios\n','team 1 : team 2\n', 
+print('\nOls training churn ratios\n','churn : no churn\n', 
       str(ols_train_ratio)+' :   1')
-print('\nOls test win ratios\n','team 1 : team 2\n', 
+print('\nOls test churn ratios\n','churn : no churn\n', 
       str(ols_test_ratio)+' :   1')
-print('\nRfe training win ratios\n','team 1 : team 2\n', 
+print('\nRfe training churn ratios\n','churn : no churn\n', 
       str(rfe_train_ratio)+' :   1')
-print('\nRfe test win ratios\n','team 1 : team 2\n', 
+print('\nRfe test churn ratios\n','churn : no churn\n', 
       str(rfe_test_ratio)+' :   1')
-print('\nLasso training win ratios\n','team 1 : team 2\n', 
+print('\nLasso training churn ratios\n','churn : no churn\n', 
       str(lasso_train_ratio)+' :   1')
-print('\nLasso test win ratios\n','team 1 : team 2\n', 
+print('\nLasso test churn ratios\n','churn : no churn\n', 
       str(lasso_test_ratio)+' :   1')
 
 ########
-# End counts of the win totals for team 1 and team 2
+# End counts of the churn totals
 ########
 
 # Create list just for the algorithm durations
@@ -705,44 +658,20 @@ timings_list.append(['Decision tree duration:', time.time()])
 algorithm_duration_list.append(time.time()) 
 
 # Create a decisions tree classifier
-pear_five_tree_clf = tree.DecisionTreeClassifier(criterion = 'entropy')
+pearsons_tree_clf = tree.DecisionTreeClassifier(criterion = 'entropy')
 
 # Train the classifier on pearsons top 5 attributes
-pear_five_tree_clf = pear_five_tree_clf.fit(pear_five_df_train_x, 
-                                            pear_five_df_train_y)
+pearsons_tree_clf = pearsons_tree_clf.fit(pearsons_df_train_x, 
+                                            pearsons_df_train_y)
 
 # Predict on pearsons top 5 attributes
-pear_five_prediction = pear_five_tree_clf.predict(pear_five_df_test_x)
+pearsons_tree_clf_prediction = pearsons_tree_clf.predict(pearsons_df_test_x)
 
 # end time
 algorithm_duration_list.append(time.time()) 
 
 ####
 # End five
-####
-
-####
-# Start ten
-####
-
-# start time
-algorithm_duration_list.append(time.time()) 
-
-# Create a decisions tree classifier
-pear_ten_tree_clf = tree.DecisionTreeClassifier(criterion = 'entropy')
-
-# Train the classifier on pearsons top 10 attributes
-pear_ten_tree_clf = pear_ten_tree_clf.fit(pear_ten_df_train_x, 
-                                          pear_ten_df_train_y)
-
-# Predict on pearsons top 10 attributes
-pear_ten_prediction = pear_ten_tree_clf.predict(pear_ten_df_test_x)
-
-# end time
-algorithm_duration_list.append(time.time()) 
-
-####
-# End ten
 ####
 
 ####
@@ -819,10 +748,8 @@ algorithm_duration_list.append(time.time())
 ####
 
 # Store predictions
-global_accuracy.append(100-(round(np.mean(pear_five_prediction 
-                                          != pear_five_df_test_y) * 100, 2)))
-global_accuracy.append(100-(round(np.mean(pear_ten_prediction 
-                                          != pear_ten_df_test_y) * 100, 2)))
+global_accuracy.append(100-(round(np.mean(pearsons_tree_clf_prediction 
+                                          != pearsons_df_test_y) * 100, 2)))
 global_accuracy.append(100-(round(np.mean(ols_df_prediction 
                                           != ols_df_test_y) * 100, 2)))
 global_accuracy.append(100-(round(np.mean(rfe_df_prediction 
@@ -845,44 +772,20 @@ timings_list.append(['Naive Bayes duration:', time.time()])
 algorithm_duration_list.append(time.time()) 
 
 # Create a naive bayes classifier
-pear_five_gnb_clf = GaussianNB()
+pearsons_gnb_clf = GaussianNB()
 
 # Train the classifier on pearsons top 5 attributes
-pear_five_gnb_clf = pear_five_gnb_clf.fit(pear_five_df_train_x, 
-                                          pear_five_df_train_y)
+pearsons_gnb_clf = pearsons_gnb_clf.fit(pearsons_df_train_x, 
+                                          pearsons_df_train_y)
 
 # Predict on pearsons top 5 attributes
-pear_five_prediction = pear_five_gnb_clf.predict(pear_five_df_test_x)
+pearsons_gnb_clf_prediction = pearsons_gnb_clf.predict(pearsons_df_test_x)
 
 # end time
 algorithm_duration_list.append(time.time()) 
 
 ####
 # End five
-####
-
-####
-# Start ten
-####
-
-# start timing
-algorithm_duration_list.append(time.time()) 
-
-# Create a naive bayes classifier
-pear_ten_gnb_clf = GaussianNB()
-
-# Train the classifier on pearsons top 10 attributes
-pear_ten_gnb_clf = pear_ten_gnb_clf.fit(pear_ten_df_train_x, 
-                                        pear_ten_df_train_y)
-
-# Predict on pearsons top 10 attributes
-pear_ten_prediction = pear_ten_gnb_clf.predict(pear_ten_df_test_x)
-
-# end time
-algorithm_duration_list.append(time.time()) 
-
-####
-# End ten
 ####
 
 ####
@@ -958,10 +861,8 @@ algorithm_duration_list.append(time.time())
 ####
 
 # Store predictions
-global_accuracy.append(100-(round(np.mean(pear_five_prediction 
-                                          != pear_five_df_test_y) * 100, 2)))
-global_accuracy.append(100-(round(np.mean(pear_ten_prediction 
-                                          != pear_ten_df_test_y) * 100, 2)))
+global_accuracy.append(100-(round(np.mean(pearsons_gnb_clf_prediction 
+                                          != pearsons_df_test_y) * 100, 2)))
 global_accuracy.append(100-(round(np.mean(ols_df_prediction 
                                           != ols_df_test_y) * 100, 2)))
 global_accuracy.append(100-(round(np.mean(rfe_df_prediction 
@@ -976,10 +877,10 @@ global_accuracy.append(100-(round(np.mean(lasso_df_prediction
 # end timing
 timings_list.append(['naive time end', time.time()])
 
-########
-## Start Random Forest
-########
-#
+#######
+# Start Random Forest
+#######
+
 #####
 ## Start RF accuracy tests
 #####
@@ -1010,11 +911,11 @@ timings_list.append(['naive time end', time.time()])
 #        rf_clf_test = RandomForestClassifier(n_estimators = trees, 
 #                                    max_depth = depth, criterion ='entropy',
 #                                    random_state = 1337)
-#        rf_clf_test.fit(pear_five_df_train_x, pear_five_df_train_y)
+#        rf_clf_test.fit(pearsons_df_train_x, pearsons_df_train_y)
 #        pred_list.append([trees, depth, 
-#                    round(np.mean(rf_clf_test.predict(pear_five_df_test_x) 
-#                    == pear_five_df_test_y) 
-#                    * 100, 2), 'pear_five'])
+#                    round(np.mean(rf_clf_test.predict(pearsons_df_test_x) 
+#                    == pearsons_df_test_y) 
+#                    * 100, 2), 'pearsons'])
 #         
 ##create a dataframe from the classifer data
 #forest_df_1 = pd.DataFrame(pred_list, columns = ['Estimators', 'Depth',
@@ -1034,53 +935,11 @@ timings_list.append(['naive time end', time.time()])
 ## append the models accruacy to the accuracy list
 #rf_accuracy.append(round(ind.item(2), 2))
 #
-#print('Pearsons Five:\nOptimal trees:', trees_depth[0],
+#print('Pearsons:\nOptimal trees:', trees_depth[0],
 #      '\nOptimal depth:', trees_depth[1])
 #
 #####
 ## End pear five dataSet
-#####
-#
-#####
-## Start pear ten dataSet
-#####
-#
-#pred_list = []
-#
-#for trees in range(1, 26):
-#    for depth in range(1, 11):
-#        rf_clf_test = RandomForestClassifier(n_estimators = trees, 
-#                                    max_depth = depth, criterion ='entropy',
-#                                    random_state = 1337)
-#        rf_clf_test.fit(pear_ten_df_train_x, pear_ten_df_train_y)
-#        pred_list.append([trees, depth, 
-#                    round(np.mean(rf_clf_test.predict(pear_ten_df_test_x) 
-#                    == pear_ten_df_test_y) 
-#                    * 100, 2), 'pear_ten'])
-#
-## create a dataframe from the classifer data
-#forest_df_2 = pd.DataFrame(pred_list, columns = ['Estimators', 'Depth',
-#                                                 'Accuracy', 'Set'])
-#
-## append forest 2 to full df
-#rf_accuracy_df = rf_accuracy_df.append(forest_df_2)
-#
-## store the lowest error rate value from the classifier
-#ind = forest_df_2.loc[forest_df_2['Accuracy'] == 
-#                      max(forest_df_2.Accuracy)].values
-#
-## pull out the number of trees and depth
-#trees_depth.append(int(ind.item(0)))
-#trees_depth.append(int(ind.item(1)))
-#
-## append the models accruacy to the accuracy list
-#rf_accuracy.append(round(ind.item(2), 2))
-#
-#print('Pearsons Ten:\nOptimal trees:', trees_depth[2],
-#      '\nOptimal depth:', trees_depth[3])
-#
-#####
-## End pear ten dataSet
 #####
 #
 #####
@@ -1118,8 +977,8 @@ timings_list.append(['naive time end', time.time()])
 ## append the models accruacy to the accuracy list
 #rf_accuracy.append(round(ind.item(2), 2))
 #
-#print('OLS:\nOptimal trees:', trees_depth[4],
-#      '\nOptimal depth:', trees_depth[5])
+#print('OLS:\nOptimal trees:', trees_depth[2],
+#      '\nOptimal depth:', trees_depth[3])
 #
 #
 #####
@@ -1161,8 +1020,8 @@ timings_list.append(['naive time end', time.time()])
 ## append the models accruacy to the accuracy list
 #rf_accuracy.append(round(ind.item(2), 2))
 #
-#print('RFE:\nOptimal trees:', trees_depth[6],
-#      '\nOptimal depth:', trees_depth[7])
+#print('RFE:\nOptimal trees:', trees_depth[4],
+#      '\nOptimal depth:', trees_depth[5])
 #
 #####
 ## End rfe dataSet
@@ -1203,8 +1062,8 @@ timings_list.append(['naive time end', time.time()])
 ## append the models accruacy to the accuracy list
 #rf_accuracy.append(round(ind.item(2), 2))
 #
-#print('Lasso:\nOptimal trees:', trees_depth[8],
-#      '\nOptimal depth:', trees_depth[9])
+#print('Lasso:\nOptimal trees:', trees_depth[6],
+#      '\nOptimal depth:', trees_depth[7])
 #
 #####
 ## End lasso dataSet
@@ -1245,8 +1104,8 @@ timings_list.append(['naive time end', time.time()])
 ## append the models accruacy to the accuracy list
 #rf_accuracy.append(round(ind.item(2), 2))
 #
-#print('Full:\nOptimal trees:', trees_depth[10],
-#      '\nOptimal depth:', trees_depth[11])
+#print('Full:\nOptimal trees:', trees_depth[8],
+#      '\nOptimal depth:', trees_depth[9])
 #
 #####
 ## End full dataSet
@@ -1295,46 +1154,22 @@ algorithm_duration_list.append(time.time())
 #                                max_depth = 9, criterion ='entropy',
 #                                random_state = 1337)
 
-rf_clf = RandomForestClassifier(n_estimators = 1, 
-                                max_depth = 7, criterion ='entropy',
+rf_clf = RandomForestClassifier(n_estimators = 10, 
+                                max_depth = 6, criterion ='entropy',
                                 random_state = 1337)
-rf_clf.fit(pear_five_df_train_x, pear_five_df_train_y)
+rf_clf.fit(pearsons_df_train_x, pearsons_df_train_y)
 
-rf_pear_five_pred = rf_clf.predict(pear_five_df_test_x)
+rf_pearsons_pred = rf_clf.predict(pearsons_df_test_x)
 
 # store accuracy
-global_accuracy.append(100-(round(np.mean(rf_clf.predict(pear_five_df_test_x) 
-                                  != pear_five_df_test_y),2)))
+global_accuracy.append(100-(round(np.mean(rf_clf.predict(pearsons_df_test_x) 
+                                  != pearsons_df_test_y),2)))
 
 # end time
 algorithm_duration_list.append(time.time())
  
 ####
 # End pear five dataset
-####
-
-####
-# Start pear ten dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-#singular RF 
-rf_clf = RandomForestClassifier(n_estimators = 24, 
-                                    max_depth = 10, criterion ='entropy',
-                                    random_state = 1337)
-rf_clf.fit(pear_ten_df_train_x, pear_ten_df_train_y)
-
-# store accuracy
-global_accuracy.append(100-(round(np.mean(rf_clf.predict(pear_ten_df_test_x) 
-                                  != pear_ten_df_test_y),2)))
-
-# end time
-algorithm_duration_list.append(time.time())
-
-####
-# End pear ten dataset
 ####
 
 ####
@@ -1345,7 +1180,7 @@ algorithm_duration_list.append(time.time())
 algorithm_duration_list.append(time.time())
 
 #singular RF 
-rf_clf = RandomForestClassifier(n_estimators = 22, 
+rf_clf = RandomForestClassifier(n_estimators = 19, 
                                     max_depth = 10, criterion ='entropy',
                                     random_state = 1337)
 rf_clf.fit(ols_df_train_x, ols_df_train_y)
@@ -1369,8 +1204,8 @@ algorithm_duration_list.append(time.time())
 algorithm_duration_list.append(time.time())
 
 #singular RF 
-rf_clf = RandomForestClassifier(n_estimators = 21, 
-                                    max_depth = 9, criterion ='entropy',
+rf_clf = RandomForestClassifier(n_estimators = 25, 
+                                    max_depth = 8, criterion ='entropy',
                                     random_state = 1337)
 rf_clf.fit(rfe_df_train_x, rfe_df_train_y)
 
@@ -1393,7 +1228,7 @@ algorithm_duration_list.append(time.time())
 algorithm_duration_list.append(time.time())
 
 #singular RF 
-rf_clf = RandomForestClassifier(n_estimators = 24, 
+rf_clf = RandomForestClassifier(n_estimators = 21, 
                                     max_depth = 10, criterion ='entropy',
                                     random_state = 1337)
 rf_clf.fit(lasso_df_train_x, lasso_df_train_y)
@@ -1418,7 +1253,7 @@ algorithm_duration_list.append(time.time())
 
 
 #singular RF 
-rf_clf = RandomForestClassifier(n_estimators = 23, 
+rf_clf = RandomForestClassifier(n_estimators = 16, 
                                     max_depth = 10, criterion ='entropy',
                                     random_state = 1337)
 rf_clf.fit(full_df_train_x, full_df_train_y)
@@ -1462,59 +1297,315 @@ timings_list.append(['Knn duration:', time.time()])
 # Start KNN
 #######
 
+#######
+# Start KNN evaluation
+#######
+
 ####
-# Start pear-five dataset
+# Start pearsons dataset
+####
+
+# Create empty lists to store the models error rate and 
+# accuracy across various K's
+error_rate = []
+accuracy = []
+k_value = []
+
+# For loop to test the model using various neighbor sizes
+# with k neighbors set to 3 to 25
+try:
+    for k in range (3, 105, 2):
+        # Create the classifier with neighbors set to k from the loop
+        knn_classifier = KNeighborsClassifier(n_neighbors = k)
+       
+        # Train the classifier
+        knn_classifier.fit(pearsons_scaled_df_train_x, 
+                           pearsons_scaled_df_train_y)
+        
+        # Perform predictions
+        pred_k = knn_classifier.predict(pearsons_scaled_df_test_x)
+        
+        # Store error rate and accuracy for particular K value
+        k_value.append(k)
+        error_rate.append(round(np.mean(
+                pred_k != pearsons_scaled_df_test_y) * 100, 2))
+        
+        accuracy.append(round(sum(
+                pred_k == pearsons_scaled_df_test_y) / len(pred_k) * 100, 2))
+        
+except Exception as e:
+    print(e)
+    print('Failed to build the KNN classifier.')
+
+for i in range(len(accuracy)):
+    print('The accuracy on the pearsons data when K =', k_value[i], 
+          'is:', accuracy[i])
+  
+# create a plot to display the accuracy of the model across K
+fig = plt.figure(figsize=(10, 4))
+ax = plt.gca()
+plt.plot(range(3, 105, 2), accuracy, color ='blue',
+         marker = 'o', markerfacecolor = 'black', markersize = 10)
+plt.title('Accuracy vs. k for the pearsons dataset')
+plt.xlabel('Number of neighbors: k')
+plt.ylabel('Accuracy')
+
+# find the index of the highest accuracy
+max_index = accuracy.index(max(accuracy))
+
+# store the accuracy value
+highest_accuracy = accuracy[max_index]
+
+# append to accuracy list
+global_accuracy.append(accuracy[max_index])
+
+# store the best k value
+best_k = [k_value[max_index]]
+
+print('The most accurate k for the pearsons attribute selection is', 
+      k_value[max_index], 'at', accuracy[max_index],'%')
+
+####
+# end pearsons dataset
+####
+
+####
+# Start ols dataset
+####
+
+# Create empty lists to store the models error rate and 
+# accuracy across various K's
+error_rate = []
+accuracy = []
+k_value = []
+
+# For loop to test the model using various neighbor sizes
+# with k neighbors set to 3 to 25
+try:
+    for k in range (9, 31, 2):
+        # Create the classifier with neighbors set to k from the loop
+        knn_classifier = KNeighborsClassifier(n_neighbors = k)
+       
+        # Train the classifier
+        knn_classifier.fit(ols_scaled_df_train_x, 
+                           ols_scaled_df_train_y)
+        
+        # Perform predictions
+        pred_k = knn_classifier.predict(ols_scaled_df_test_x)
+        
+        # Store error rate and accuracy for particular K value
+        k_value.append(k)
+        error_rate.append(round(np.mean(
+                pred_k != ols_scaled_df_test_y) * 100, 2))
+        
+        accuracy.append(round(sum(
+                pred_k == ols_scaled_df_test_y) / len(pred_k) * 100, 2))
+        
+except Exception as e:
+    print(e)
+    print('failed to build the KNN classifier.')
+
+for i in range(len(accuracy)):
+    print('The accuracy on the ols data when K =', k_value[i], 
+          'is:', accuracy[i])
+    
+# create a plot to display the accuracy of the model across K
+fig = plt.figure(figsize=(10, 4))
+ax = plt.gca()
+plt.plot(range(9, 31, 2), accuracy, color ='blue',
+         marker = 'o', markerfacecolor = 'black', markersize = 10)
+plt.title('Accuracy vs. k for the ols dataset')
+plt.xlabel('Number of neighbors: k')
+plt.ylabel('Accuracy')
+
+# find the index of the highest accuracy
+max_index = accuracy.index(max(accuracy))
+
+# store the accuracy value
+highest_accuracy = accuracy[max_index]
+
+# append to accuracy list
+global_accuracy.append(accuracy[max_index])
+
+# store the best k value
+best_k = [k_value[max_index]]
+
+print('The most accurate k for the ols attribute selection is', 
+      k_value[max_index], 'at', accuracy[max_index],'%')
+
+####
+# end ols dataset
+####
+    
+####
+# Start rfe dataset
+####
+
+# Create empty lists to store the models error rate and 
+# accuracy across various K's
+error_rate = []
+accuracy = []
+k_value = []
+
+# For loop to test the model using various neighbor sizes
+# with k neighbors set to 3 to 25
+try:
+    for k in range (9, 31, 2):
+        # Create the classifier with neighbors set to k from the loop
+        knn_classifier = KNeighborsClassifier(n_neighbors = k)
+       
+        # Train the classifier
+        knn_classifier.fit(rfe_scaled_df_train_x, 
+                           rfe_scaled_df_train_y)
+        
+        # Perform predictions
+        pred_k = knn_classifier.predict(rfe_scaled_df_test_x)
+        
+        # Store error rate and accuracy for particular K value
+        k_value.append(k)
+        error_rate.append(round(np.mean(
+                pred_k != rfe_scaled_df_test_y) * 100, 2))
+        
+        accuracy.append(round(sum(
+                pred_k == rfe_scaled_df_test_y) / len(pred_k) * 100, 2))
+        
+except Exception as e:
+    print(e)
+    print('failed to build the KNN classifier.')
+
+for i in range(len(accuracy)):
+    print('The accuracy on the rfe data when K =', k_value[i], 
+          'is:', accuracy[i])
+    
+# create a plot to display the accuracy of the model across K
+fig = plt.figure(figsize=(10, 4))
+ax = plt.gca()
+plt.plot(range(9, 31, 2), accuracy, color ='blue',
+         marker = 'o', markerfacecolor = 'black', markersize = 10)
+plt.title('Accuracy vs. k for the rfe dataset')
+plt.xlabel('Number of neighbors: k')
+plt.ylabel('Accuracy')
+
+# find the index of the highest accuracy
+max_index = accuracy.index(max(accuracy))
+
+# store the accuracy value
+highest_accuracy = accuracy[max_index]
+
+# append to accuracy list
+global_accuracy.append(accuracy[max_index])
+
+# store the best k value
+best_k = [k_value[max_index]]
+
+#best_set = 'pearson five'
+
+print('The most accurate k for the rfe selection is', 
+      k_value[max_index], 'at', accuracy[max_index],'%')
+
+####
+# end rfe dataset
+####
+    
+####
+# Start lasso dataset
+####
+
+# Create empty lists to store the models error rate and 
+# accuracy across various K's
+error_rate = []
+accuracy = []
+k_value = []
+
+# For loop to test the model using various neighbor sizes
+# with k neighbors set to 3 to 25
+try:
+    for k in range (9, 31, 2):
+        # Create the classifier with neighbors set to k from the loop
+        knn_classifier = KNeighborsClassifier(n_neighbors = k)
+       
+        # Train the classifier
+        knn_classifier.fit(lasso_scaled_df_train_x, 
+                           lasso_scaled_df_train_y)
+        
+        # Perform predictions
+        pred_k = knn_classifier.predict(lasso_scaled_df_test_x)
+        
+        # Store error rate and accuracy for particular K value
+        k_value.append(k)
+        error_rate.append(round(np.mean(
+                pred_k != lasso_scaled_df_test_y) * 100, 2))
+        
+        accuracy.append(round(sum(
+                pred_k == lasso_scaled_df_test_y) / len(pred_k) * 100, 2))
+        
+except Exception as e:
+    print(e)
+    print('failed to build the KNN classifier.')
+
+for i in range(len(accuracy)):
+    print('The accuracy on the lasso data when K =', k_value[i], 
+          'is:', accuracy[i])
+    
+# create a plot to display the accuracy of the model across K
+fig = plt.figure(figsize=(10, 4))
+ax = plt.gca()
+plt.plot(range(9, 31, 2), accuracy, color ='blue',
+         marker = 'o', markerfacecolor = 'black', markersize = 10)
+plt.title('Accuracy vs. k for the lasso dataset')
+plt.xlabel('Number of neighbors: k')
+plt.ylabel('Accuracy')
+
+# find the index of the highest accuracy
+max_index = accuracy.index(max(accuracy))
+
+# store the accuracy value
+highest_accuracy = accuracy[max_index]
+
+# append to accuracy list
+global_accuracy.append(accuracy[max_index])
+
+# store the best k value
+best_k = [k_value[max_index]]
+
+#best_set = 'pearson five'
+
+print('The most accurate k for the lasso attribute selection is', 
+      k_value[max_index], 'at', accuracy[max_index],'%')
+
+####
+# end lasso dataset
+####
+
+#######
+# end KNN evaluation
+#######
+
+
+####
+# Start pearsons dataset
 ####
 
 # start time
 algorithm_duration_list.append(time.time())
 
 # initalize knn
-knn_classifier = KNeighborsClassifier(n_neighbors = 15)
+knn_classifier = KNeighborsClassifier(n_neighbors = 83)
 
 # Train the classifier
-knn_classifier.fit(pear_five_scaled_df_train_x, 
-                   pear_five_scaled_df_train_y)
+knn_classifier.fit(pearsons_scaled_df_train_x, 
+                   pearsons_scaled_df_train_y)
 
 # store accuracy
 global_accuracy.append(100-(round(np.mean(knn_classifier.predict(
-                                          pear_five_scaled_df_test_x) 
-                                          != pear_five_scaled_df_test_y),2)))
+                                          pearsons_scaled_df_test_x) 
+                                          != pearsons_scaled_df_test_y),2)))
 
 # end time
 algorithm_duration_list.append(time.time())
 
 ####
 # end pear-five dataset
-####
-
-####
-# Start pear-ten dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-# initalize knn
-knn_classifier = KNeighborsClassifier(n_neighbors = 9)
-
-# Train the classifier
-knn_classifier.fit(pear_ten_scaled_df_train_x, 
-                   pear_ten_scaled_df_train_y)
-        
-# Perform predictions
-#pred_k = knn_classifier.predict(pear_ten_scaled_df_test_x)
-
-# store accuracy
-global_accuracy.append(100-(round(np.mean(knn_classifier.predict(
-                                          pear_ten_scaled_df_test_x) 
-                                          != pear_ten_scaled_df_test_y),2)))
-
-# end time
-algorithm_duration_list.append(time.time())
-
-####
-# end pear-ten dataset
 ####
 
 ####
@@ -1525,7 +1616,7 @@ algorithm_duration_list.append(time.time())
 algorithm_duration_list.append(time.time())
 
 # initalize knn
-knn_classifier = KNeighborsClassifier(n_neighbors = 11)
+knn_classifier = KNeighborsClassifier(n_neighbors = 29)
 
 # Train the classifier
 knn_classifier.fit(ols_scaled_df_train_x, 
@@ -1551,7 +1642,7 @@ algorithm_duration_list.append(time.time())
 algorithm_duration_list.append(time.time())
 
 # initalize knn
-knn_classifier = KNeighborsClassifier(n_neighbors = 15)
+knn_classifier = KNeighborsClassifier(n_neighbors = 27)
 
 # Train the classifier
 knn_classifier.fit(rfe_scaled_df_train_x, 
@@ -1577,7 +1668,7 @@ algorithm_duration_list.append(time.time())
 algorithm_duration_list.append(time.time())
 
 # initalize knn
-knn_classifier = KNeighborsClassifier(n_neighbors = 25)
+knn_classifier = KNeighborsClassifier(n_neighbors = 29)
 
 # Train the classifier
 knn_classifier.fit(lasso_scaled_df_train_x, 
@@ -1623,49 +1714,21 @@ algorithm_duration_list.append(time.time())
 svm_classifier_linear = svm.SVC(kernel = 'linear')
 
 # fit the classifier on training data
-svm_classifier_linear.fit(pear_five_scaled_df_train_x, 
-                          pear_five_scaled_df_train_y)
+svm_classifier_linear.fit(pearsons_scaled_df_train_x, 
+                          pearsons_scaled_df_train_y)
 
 # Predict using 2018 feature data
-prediction_linear = svm_classifier_linear.predict(pear_five_scaled_df_test_x)
+prediction_linear = svm_classifier_linear.predict(pearsons_scaled_df_test_x)
 
 # calculate error rate
 global_accuracy.append(100-(round(np.mean(prediction_linear != 
-                                   pear_five_scaled_df_test_y) * 100, 2)))
+                                   pearsons_scaled_df_test_y) * 100, 2)))
 
 # end time
 algorithm_duration_list.append(time.time()) 
 
 ####
 # End pear five dataset
-####
-
-####
-# Start pear ten dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-# create a linear SVM classifier
-svm_classifier_linear = svm.SVC(kernel = 'linear')
-
-# fit the classifier on training data
-svm_classifier_linear.fit(pear_ten_scaled_df_train_x, 
-                          pear_ten_scaled_df_train_y)
-
-# Predict using 2018 feature data
-prediction_linear = svm_classifier_linear.predict(pear_ten_scaled_df_test_x)
-
-# calculate error rate
-global_accuracy.append(100-(round(np.mean(prediction_linear != 
-                                   pear_ten_scaled_df_test_y) * 100, 2)))
-
-# end time
-algorithm_duration_list.append(time.time())
-
-####
-# End pear ten dataset
 ####
 
 ####
@@ -1777,49 +1840,21 @@ algorithm_duration_list.append(time.time())
 svm_classifier_rbf = svm.SVC(kernel = 'rbf')
 
 # fit the classifier on training data
-svm_classifier_rbf.fit(pear_five_scaled_df_train_x, 
-                       pear_five_scaled_df_train_y)
+svm_classifier_rbf.fit(pearsons_scaled_df_train_x, 
+                       pearsons_scaled_df_train_y)
 
 # Predict using 2018 feature data
-prediction_rbf = svm_classifier_rbf.predict(pear_five_scaled_df_test_x)
+prediction_rbf = svm_classifier_rbf.predict(pearsons_scaled_df_test_x)
 
 # calculate error rate
 global_accuracy.append(100-(round(np.mean(prediction_rbf != 
-                                   pear_five_scaled_df_test_y) * 100, 2)))
+                                   pearsons_scaled_df_test_y) * 100, 2)))
 
 # end time
 algorithm_duration_list.append(time.time())
 
 ####
 # End pear five dataset
-####
-
-####
-# Start pear ten dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-# create a rbf SVM classifier
-svm_classifier_rbf = svm.SVC(kernel = 'rbf')
-
-# fit the classifier on training data
-svm_classifier_rbf.fit(pear_ten_scaled_df_train_x, 
-                       pear_ten_scaled_df_train_y)
-
-# Predict using 2018 feature data
-prediction_rbf = svm_classifier_rbf.predict(pear_ten_scaled_df_test_x)
-
-# calculate error rate
-global_accuracy.append(100-(round(np.mean(prediction_rbf != 
-                                   pear_ten_scaled_df_test_y) * 100, 2)))
-
-# end time
-algorithm_duration_list.append(time.time())
-
-####
-# End pear ten dataset
 ####
 
 ####
@@ -1931,49 +1966,21 @@ algorithm_duration_list.append(time.time())
 svm_classifier_poly = svm.SVC(kernel = 'poly')
 
 # fit the classifier on training data
-svm_classifier_poly.fit(pear_five_scaled_df_train_x, 
-                        pear_five_scaled_df_train_y)
+svm_classifier_poly.fit(pearsons_scaled_df_train_x, 
+                        pearsons_scaled_df_train_y)
 
 # Predict using 2018 feature data
-prediction_poly = svm_classifier_poly.predict(pear_five_scaled_df_test_x)
+prediction_poly = svm_classifier_poly.predict(pearsons_scaled_df_test_x)
 
 # calculate error rate
 global_accuracy.append(100-(round(np.mean(prediction_poly != 
-                                   pear_five_scaled_df_test_y) * 100, 2)))
+                                   pearsons_scaled_df_test_y) * 100, 2)))
 
 # end time
 algorithm_duration_list.append(time.time())
 
 ####
 # End pear five dataset
-####
-
-####
-# Start pear ten dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-# create a poly SVM classifier
-svm_classifier_poly = svm.SVC(kernel = 'poly')
-
-# fit the classifier on training data
-svm_classifier_poly.fit(pear_ten_scaled_df_train_x, 
-                        pear_ten_scaled_df_train_y)
-
-# Predict using 2018 feature data
-prediction_poly = svm_classifier_poly.predict(pear_ten_scaled_df_test_x)
-
-# calculate error rate
-global_accuracy.append(100-(round(np.mean(prediction_poly != 
-                                   pear_ten_scaled_df_test_y) * 100, 2)))
-
-# end time
-algorithm_duration_list.append(time.time())
-
-####
-# End pear ten dataset
 ####
 
 ####
@@ -2090,50 +2097,21 @@ algorithm_duration_list.append(time.time())
 log_reg_classifier = LogisticRegression(solver = 'liblinear')
 
 # Train the classifier on 2017 data
-log_reg_classifier.fit(pear_five_scaled_df_train_x, 
-                       pear_five_scaled_df_train_y)
+log_reg_classifier.fit(pearsons_scaled_df_train_x, 
+                       pearsons_scaled_df_train_y)
 
 # Predict using 2018 feature data
-prediction = log_reg_classifier.predict(pear_five_scaled_df_test_x)
+prediction = log_reg_classifier.predict(pearsons_scaled_df_test_x)
 
 # append the models accruacy to the accuracy list
 global_accuracy.append(round(np.mean(prediction == 
-                              pear_five_scaled_df_test_y) * 100, 2))
+                              pearsons_scaled_df_test_y) * 100, 2))
 
 # end time
 algorithm_duration_list.append(time.time())
 
 ####
 # End pear five dataset
-####
-
-####
-# Start pear ten dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-# Create a logistic classifier
-# set solver to avoid the warning
-log_reg_classifier = LogisticRegression(solver = 'liblinear')
-
-# Train the classifier on 2017 data
-log_reg_classifier.fit(pear_ten_scaled_df_train_x, 
-                       pear_ten_scaled_df_train_y)
-
-# Predict using 2018 feature data
-prediction = log_reg_classifier.predict(pear_ten_scaled_df_test_x)
-
-# append the models accruacy to the accuracy list
-global_accuracy.append(round(np.mean(prediction == 
-                              pear_ten_scaled_df_test_y) * 100, 2))
-
-# end time
-algorithm_duration_list.append(time.time())
-
-####
-# End pear ten dataset
 ####
 
 ####
@@ -2250,50 +2228,21 @@ algorithm_duration_list.append(time.time())
 log_reg_classifier = LogisticRegression(solver = 'sag')
 
 # Train the classifier on 2017 data
-log_reg_classifier.fit(pear_five_scaled_df_train_x, 
-                       pear_five_scaled_df_train_y)
+log_reg_classifier.fit(pearsons_scaled_df_train_x, 
+                       pearsons_scaled_df_train_y)
 
 # Predict using 2018 feature data
-prediction = log_reg_classifier.predict(pear_five_scaled_df_test_x)
+prediction = log_reg_classifier.predict(pearsons_scaled_df_test_x)
 
 # append the models accruacy to the accuracy list
 global_accuracy.append(round(np.mean(prediction == 
-                              pear_five_scaled_df_test_y) * 100, 2))
+                              pearsons_scaled_df_test_y) * 100, 2))
 
 # end time
 algorithm_duration_list.append(time.time())
 
 ####
 # End pear five dataset
-####
-
-####
-# Start pear ten dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-# Create a logistic classifier
-# set solver to avoid the warning
-log_reg_classifier = LogisticRegression(solver = 'sag')
-
-# Train the classifier on 2017 data
-log_reg_classifier.fit(pear_ten_scaled_df_train_x, 
-                       pear_ten_scaled_df_train_y)
-
-# Predict using 2018 feature data
-prediction = log_reg_classifier.predict(pear_ten_scaled_df_test_x)
-
-# append the models accruacy to the accuracy list
-global_accuracy.append(round(np.mean(prediction == 
-                              pear_ten_scaled_df_test_y) * 100, 2))
-
-# end time
-algorithm_duration_list.append(time.time())
-
-####
-# End pear ten dataset
 ####
 
 ####
@@ -2409,50 +2358,21 @@ algorithm_duration_list.append(time.time())
 log_reg_classifier = LogisticRegression(solver = 'newton-cg')
 
 # Train the classifier on 2017 data
-log_reg_classifier.fit(pear_five_scaled_df_train_x, 
-                       pear_five_scaled_df_train_y)
+log_reg_classifier.fit(pearsons_scaled_df_train_x, 
+                       pearsons_scaled_df_train_y)
 
 # Predict using 2018 feature data
-prediction = log_reg_classifier.predict(pear_five_scaled_df_test_x)
+prediction = log_reg_classifier.predict(pearsons_scaled_df_test_x)
 
 # append the models accruacy to the accuracy list
 global_accuracy.append(round(np.mean(prediction == 
-                              pear_five_scaled_df_test_y) * 100, 2))
+                              pearsons_scaled_df_test_y) * 100, 2))
 
 # end time
 algorithm_duration_list.append(time.time())
 
 ####
 # End pear five dataset
-####
-
-####
-# Start pear ten dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-# Create a logistic classifier
-# set solver to avoid the warning
-log_reg_classifier = LogisticRegression(solver = 'newton-cg')
-
-# Train the classifier on 2017 data
-log_reg_classifier.fit(pear_ten_scaled_df_train_x, 
-                       pear_ten_scaled_df_train_y)
-
-# Predict using 2018 feature data
-prediction = log_reg_classifier.predict(pear_ten_scaled_df_test_x)
-
-# append the models accruacy to the accuracy list
-global_accuracy.append(round(np.mean(prediction == 
-                              pear_ten_scaled_df_test_y) * 100, 2))
-
-# end time
-algorithm_duration_list.append(time.time())
-
-####
-# End pear ten dataset
 ####
 
 ####
@@ -2561,7 +2481,7 @@ timings_list.append(['global time end', time.time()])
 ####
 
 # create a list containing the attribute reduction methods
-attributes = ['Pearson Five', 'Pearson Ten', 'OLS', 'RFE', 'Lasso']
+attributes = ['Pearsons', 'OLS', 'RFE', 'Lasso']
 
 # create a list containing the classifier names
 classifiers = ['Decision Tree', 'Naive Bayes', 'Random Forest', 'KNN', 'SVM', 
@@ -2582,12 +2502,12 @@ for i in range(0, len(classifiers)):
                                       'time' : 0}, 
                                       ignore_index=True)
 
-# Move indexes down 1 starting at 15 to add Random forest with full dataset
-prediction_df.index = (prediction_df.index[:15].tolist() + 
-                      (prediction_df.index[15:] + 1).tolist())
+# Move indexes down 1 starting at 12 to add Random forest with full dataset
+prediction_df.index = (prediction_df.index[:12].tolist() + 
+                      (prediction_df.index[12:] + 1).tolist())
 
 # Adds Random forest with full dataset to the dataframe
-prediction_df.loc[15] = ['Random Forest', 'None', 'Full', 0, 0]
+prediction_df.loc[12] = ['Random Forest', 'None', 'Full', 0, 0]
 
 # reorders the indexes after the insert
 prediction_df = prediction_df.sort_index()
@@ -2714,8 +2634,8 @@ print('The least accurate classifier was', least_accurate[0][0], 'using',
       'attribute set with an accuracy of', least_accurate[0][3],'%')
 
 # confusion matrix for random forest 8/8
-cm_one = confusion_matrix(pear_five_df_test_y, rf_pear_five_pred)
-tn, fp, fn, tp  = confusion_matrix(pear_five_df_test_y, \
+cm_one = confusion_matrix(pearsons_df_test_y, rf_pear_five_pred)
+tn, fp, fn, tp  = confusion_matrix(pearsons_df_test_y, \
                                    rf_pear_five_pred).ravel()
 
 # Create confusion matrix heatmap
@@ -2736,11 +2656,11 @@ plt.ylabel('Actual label')
 plt.xlabel('Predicted label')
 
 # print precision and recall values
-print(classification_report(pear_five_df_test_y, rf_pear_five_pred))
+print(classification_report(pearsons_df_test_y, rf_pear_five_pred))
 
 # TPR/TNR rates
 print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
-      round(recall_score(pear_five_df_test_y, rf_pear_five_pred) * 100, 2),'%')
+      round(recall_score(pearsons_df_test_y, rf_pear_five_pred) * 100, 2),'%')
 print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
     round(tn / (tn + fp) * 100, 2),'%')
 
