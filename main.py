@@ -8,7 +8,7 @@ Created on Sat Jun 27 13:13:22 2020
 # -*- coding: utf-8 -*-
 """
 Eric Born
-Date: 12 Aug 2019
+Date: 27 June 2020
 Predicting churn in telcom data
 utilizing various machine learning algorithms
 https://www.kaggle.com/jpacse/datasets-for-churn-telecom
@@ -93,7 +93,9 @@ nulls
 zero_values
 
 # print highest null value divided by total rows
-print(max(nulls.items(), key=operator.itemgetter(1))[1] / main_df.shape[0])
+print('Highest percentage of null values:',
+      100*round(max(nulls.items(), key=operator.itemgetter(1))[1] / 
+            main_df.shape[0],4))
 
 # create a class label using 0 or 1 to indicate churnning team
 # 0 = no churn
@@ -225,6 +227,16 @@ global_accuracy = []
 
 # end timing
 timings_list.append(['clean time end', time.time()])
+
+def plot_churn_values(main_df, column=''):
+    plt.figure(figsize=(7,7))
+    plt.grid(True)
+    plt.bar(main_df[column][main_df.Churn==1].value_counts().index, 
+            main_df[column][main_df.Churn==1].value_counts().values)
+    plt.title(f'{column}')
+    plt.xticks(rotation=-90)
+
+plot_churn_values(main_df, column='CreditRating')
 
 ################
 # End data import and cleanup
