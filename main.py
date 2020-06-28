@@ -16,6 +16,7 @@ https://www.kaggle.com/jpacse/datasets-for-churn-telecom
 
 import os
 import time
+import operator
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -70,7 +71,29 @@ print('The total length of the dataframe is', main_df.shape[0], 'rows',
       'and the width is', main_df.shape[1], 'columns')
 
 # total Churn/No Churn
-print(main_df.Churn.value_counts())
+print('The churn stats of the dataframe is\n', 
+      'No:', main_df.Churn.value_counts()[0], '\n',
+      'Yes:', main_df.Churn.value_counts()[1], '\n',
+      'Ratio of', round(main_df.Churn.value_counts()[0]/
+                  main_df.Churn.value_counts()[1], 2),': 1')
+
+# find count of columns with null and 0 values
+nulls = {}
+zero_values = {}
+for col in main_df.columns:
+    if (main_df[col] == 0).sum() > 0:
+        zero_values.update({col:(main_df[col] == 0).sum()})
+    if main_df[col].isnull().sum() > 0:
+        nulls.update({col:main_df[col].isnull().sum()})
+
+# output all null columns and counts
+nulls
+
+# output all columns and counts with a 0 value
+zero_values
+
+# print highest null value divided by total rows
+print(max(nulls.items(), key=operator.itemgetter(1))[1] / main_df.shape[0])
 
 # create a class label using 0 or 1 to indicate churnning team
 # 0 = no churn
@@ -175,6 +198,7 @@ main_df.loc[main_df['Occupation'] == 'Student', 'Occupation'] = 8
 main_df.loc[main_df['MaritalStatus'] == 'Yes', 'MaritalStatus'] = 1
 main_df.loc[main_df['MaritalStatus'] == 'No', 'MaritalStatus'] = 2
 main_df.loc[main_df['MaritalStatus'] == 'Unknown', 'MaritalStatus'] = 3
+
 
 # replaces all NaN with 0
 main_df = main_df.fillna(0)
