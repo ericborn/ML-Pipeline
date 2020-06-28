@@ -202,7 +202,7 @@ main_df.drop(main_df.columns[[0,26]], axis = 1, inplace = True)
 #main_df.iloc[89,:]
 
 # 57 columns remaining
-print(main_df.head())
+#print(main_df.head())
 
 # x stores all columns except for the Churn column
 main_x = main_df.drop('Churn', 1)
@@ -1143,7 +1143,7 @@ timings_list.append(['Random forest duration:', time.time()])
 # for each random forest classifier
 
 ####
-# Start pear five dataset
+# Start pearsons dataset
 ####
 
 # start time
@@ -1159,17 +1159,18 @@ rf_clf = RandomForestClassifier(n_estimators = 10,
                                 random_state = 1337)
 rf_clf.fit(pearsons_df_train_x, pearsons_df_train_y)
 
+# store predictions
 rf_pearsons_pred = rf_clf.predict(pearsons_df_test_x)
 
 # store accuracy
-global_accuracy.append(100-(round(np.mean(rf_clf.predict(pearsons_df_test_x) 
+global_accuracy.append(100-(round(np.mean(rf_pearsons_pred
                                   != pearsons_df_test_y),2)))
 
 # end time
 algorithm_duration_list.append(time.time())
  
 ####
-# End pear five dataset
+# End pearsons dataset
 ####
 
 ####
@@ -1185,11 +1186,12 @@ rf_clf = RandomForestClassifier(n_estimators = 19,
                                     random_state = 1337)
 rf_clf.fit(ols_df_train_x, ols_df_train_y)
 
+# store predictions
 rf_ols_pred = rf_clf.predict(ols_df_test_x)
 
 # store accuracy
-global_accuracy.append(100-(round(np.mean(rf_clf.predict(ols_df_test_x) 
-                                  != ols_df_test_y),2))) 
+global_accuracy.append(100-(round(np.mean(rf_ols_pred != ols_df_test_y),2)))
+                                  
 
 # end time
 algorithm_duration_list.append(time.time())
@@ -1211,10 +1213,12 @@ rf_clf = RandomForestClassifier(n_estimators = 25,
                                     random_state = 1337)
 rf_clf.fit(rfe_df_train_x, rfe_df_train_y)
 
-# store accuracy
-global_accuracy.append(100-(round(np.mean(rf_clf.predict(rfe_df_test_x) 
-                                  != rfe_df_test_y),2)))
+# store predictions
+rf_rfe_pred = rf_clf.predict(rfe_df_test_x)
 
+# store accuracy
+global_accuracy.append(100-(round(np.mean(rf_rfe_pred != rfe_df_test_y),2)))
+                                  
 # end time
 algorithm_duration_list.append(time.time())
 
@@ -1235,8 +1239,12 @@ rf_clf = RandomForestClassifier(n_estimators = 21,
                                     random_state = 1337)
 rf_clf.fit(lasso_df_train_x, lasso_df_train_y)
 
+# store predictions
+rf_lasso_pred = rf_clf.predict(lasso_df_test_x)
+
+
 # store accuracy
-global_accuracy.append(100-(round(np.mean(rf_clf.predict(lasso_df_test_x) 
+global_accuracy.append(100-(round(np.mean(rf_lasso_pred
                                   != lasso_df_test_y),2)))
 
 # end time
@@ -1260,9 +1268,11 @@ rf_clf = RandomForestClassifier(n_estimators = 16,
                                     random_state = 1337)
 rf_clf.fit(full_df_train_x, full_df_train_y)
 
+# store predictions
+rf_full_pred = rf_clf.predict(full_df_test_x)
+
 # store accuracy
-global_accuracy.append(100-(round(np.mean(rf_clf.predict(full_df_test_x) 
-                                  != full_df_test_y),2)))
+global_accuracy.append(100-(round(np.mean(rf_full_pred != full_df_test_y),2)))                  
 
 # end time
 algorithm_duration_list.append(time.time())
@@ -1598,9 +1608,11 @@ knn_classifier = KNeighborsClassifier(n_neighbors = 83)
 knn_classifier.fit(pearsons_scaled_df_train_x, 
                    pearsons_scaled_df_train_y)
 
+# store predictions
+knn_pearsons_pred = knn_classifier.predict(pearsons_scaled_df_test_x)
+
 # store accuracy
-global_accuracy.append(100-(round(np.mean(knn_classifier.predict(
-                                          pearsons_scaled_df_test_x) 
+global_accuracy.append(100-(round(np.mean(knn_pearsons_pred
                                           != pearsons_scaled_df_test_y),2)))
 
 # end time
@@ -1623,10 +1635,12 @@ knn_classifier = KNeighborsClassifier(n_neighbors = 29)
 # Train the classifier
 knn_classifier.fit(ols_scaled_df_train_x, 
                    ols_scaled_df_train_y)
+
+# store predictions
+knn_ols_pred = knn_classifier.predict(ols_scaled_df_test_x)
         
 # store accuracy
-global_accuracy.append(100-(round(np.mean(knn_classifier.predict(
-                                          ols_scaled_df_test_x) 
+global_accuracy.append(100-(round(np.mean(knn_ols_pred
                                           != ols_scaled_df_test_y),2)))
 
 # end time
@@ -1649,10 +1663,12 @@ knn_classifier = KNeighborsClassifier(n_neighbors = 27)
 # Train the classifier
 knn_classifier.fit(rfe_scaled_df_train_x, 
                    rfe_scaled_df_train_y)
-        
+
+# store predictions
+knn_rfe_pred = knn_classifier.predict(rfe_scaled_df_test_x) 
+       
 # store accuracy
-global_accuracy.append(100-(round(np.mean(knn_classifier.predict(
-                                          rfe_scaled_df_test_x) 
+global_accuracy.append(100-(round(np.mean(knn_rfe_pred
                                           != rfe_scaled_df_test_y),2)))
 
 # end time
@@ -1675,14 +1691,18 @@ knn_classifier = KNeighborsClassifier(n_neighbors = 29)
 # Train the classifier
 knn_classifier.fit(lasso_scaled_df_train_x, 
                    lasso_scaled_df_train_y)
-        
-# Perform predictions
-pred_k = knn_classifier.predict(lasso_scaled_df_test_x)
+ 
+# store predictions
+knn_lasso_pred = knn_classifier.predict(lasso_scaled_df_test_x)
+       
+# store accuracy
+global_accuracy.append(100-(round(np.mean(knn_lasso_pred
+                                          != rfe_scaled_df_test_y),2)))
 
-###!!!!!WHY IS THIS IMPLEMENTED DIFFERENTLY ???!!!!
-# Store accuracy
-global_accuracy.append(round(sum(pred_k == lasso_scaled_df_test_y) 
-                              / len(pred_k) * 100, 2))
+####!!!!!WHY IS THIS IMPLEMENTED DIFFERENTLY ???!!!!
+## Store accuracy
+#global_accuracy.append(round(sum(pred_k == lasso_scaled_df_test_y) 
+#                              / len(pred_k) * 100, 2))
 
 # end time
 algorithm_duration_list.append(time.time()) 
@@ -2491,8 +2511,8 @@ classifiers = ['Decision Tree', 'Naive Bayes', 'Random Forest', 'KNN', 'SVM',
                'Logistic Regression']
 
 # Creates a dataframe containing information about the classifiers and accuracy
-prediction_df = pd.DataFrame(columns =['classifier', 'details', 'attributes',
-                                       'accuracy', 'time'])
+prediction_df = pd.DataFrame(columns = ['classifier', 'details', 'attributes',
+                                        'accuracy', 'time'])
 
 # Build out a dataframe to store the classifiers and their accuracy
 for i in range(0, len(classifiers)):
@@ -2633,7 +2653,48 @@ print('The least accurate classifier was', least_accurate[0][0], 'using',
       least_accurate[0][1], 'on the', least_accurate[0][2], 
       'attribute set with an accuracy of', least_accurate[0][3],'%')
 
+####
+# Start rf pearsons prediction prints
+####
 
+# confusion matrix for random forest pearsons
+cm_one = confusion_matrix(pearsons_df_test_y, rf_pearsons_pred)
+tn, fp, fn, tp  = confusion_matrix(pearsons_df_test_y, \
+                                   rf_pearsons_pred).ravel()
+
+# Create confusion matrix heatmap
+# setup class names and tick marks
+class_names=[0,1]
+fig, ax = plt.subplots()
+tick_marks = np.arange(len(class_names))
+plt.xticks(tick_marks, class_names)
+plt.yticks(tick_marks, class_names)
+
+# Create heatmap and labels
+sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
+ax.xaxis.set_label_position("top")
+ax.set_ylim([0,2])
+plt.tight_layout()
+plt.title('Confusion matrix for Random Forest', y=1.1)
+plt.ylabel('Actual label')
+plt.xlabel('Predicted label')
+
+# print precision and recall values
+print(classification_report(pearsons_df_test_y, rf_pearsons_pred))
+
+# TPR/TNR rates
+print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
+      round(recall_score(pearsons_df_test_y, rf_pearsons_pred) * 100, 2),'%')
+print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
+    round(tn / (tn + fp) * 100, 2),'%')
+
+####
+# End rf pearsons prediction prints
+####
+
+####
+# Start rf ols prediction prints
+####
 
 # confusion matrix for random forest 8/8
 cm_one = confusion_matrix(ols_df_test_y, rf_ols_pred)
@@ -2667,5 +2728,278 @@ print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
     round(tn / (tn + fp) * 100, 2),'%')
 
 ####
-# End prediction prints
+# End rf ols prediction prints
+####
+
+####
+# Start rf rfe prediction prints
+####
+
+# confusion matrix for random forest 8/8
+cm_one = confusion_matrix(rfe_df_test_y, rf_rfe_pred)
+tn, fp, fn, tp  = confusion_matrix(rfe_df_test_y, \
+                                   rf_rfe_pred).ravel()
+
+# Create confusion matrix heatmap
+# setup class names and tick marks
+class_names=[0,1]
+fig, ax = plt.subplots()
+tick_marks = np.arange(len(class_names))
+plt.xticks(tick_marks, class_names)
+plt.yticks(tick_marks, class_names)
+
+# Create heatmap and labels
+sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
+ax.xaxis.set_label_position("top")
+ax.set_ylim([0,2])
+plt.tight_layout()
+plt.title('Confusion matrix for Random Forest', y=1.1)
+plt.ylabel('Actual label')
+plt.xlabel('Predicted label')
+
+# print precision and recall values
+print(classification_report(rfe_df_test_y, rf_rfe_pred))
+
+# TPR/TNR rates
+print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
+      round(recall_score(rfe_df_test_y, rf_rfe_pred) * 100, 2),'%')
+print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
+    round(tn / (tn + fp) * 100, 2),'%')
+
+####
+# End rf rfe prediction prints
+####
+
+####
+# Start rf lasso prediction prints
+####
+
+# confusion matrix for random forest 8/8
+cm_one = confusion_matrix(lasso_df_test_y, rf_lasso_pred)
+tn, fp, fn, tp  = confusion_matrix(lasso_df_test_y, \
+                                   rf_lasso_pred).ravel()
+
+# Create confusion matrix heatmap
+# setup class names and tick marks
+class_names=[0,1]
+fig, ax = plt.subplots()
+tick_marks = np.arange(len(class_names))
+plt.xticks(tick_marks, class_names)
+plt.yticks(tick_marks, class_names)
+
+# Create heatmap and labels
+sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
+ax.xaxis.set_label_position("top")
+ax.set_ylim([0,2])
+plt.tight_layout()
+plt.title('Confusion matrix for Random Forest', y=1.1)
+plt.ylabel('Actual label')
+plt.xlabel('Predicted label')
+
+# print precision and recall values
+print(classification_report(lasso_df_test_y, rf_lasso_pred))
+
+# TPR/TNR rates
+print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
+      round(recall_score(lasso_df_test_y, rf_lasso_pred) * 100, 2),'%')
+print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
+    round(tn / (tn + fp) * 100, 2),'%')
+
+####
+# End rf lasso prediction prints
+####
+
+####
+# Start rf lasso prediction prints
+####
+
+# confusion matrix for random forest 8/8
+cm_one = confusion_matrix(full_df_test_y, rf_full_pred)
+tn, fp, fn, tp  = confusion_matrix(full_df_test_y, \
+                                   rf_full_pred).ravel()
+
+# Create confusion matrix heatmap
+# setup class names and tick marks
+class_names=[0,1]
+fig, ax = plt.subplots()
+tick_marks = np.arange(len(class_names))
+plt.xticks(tick_marks, class_names)
+plt.yticks(tick_marks, class_names)
+
+# Create heatmap and labels
+sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
+ax.xaxis.set_label_position("top")
+ax.set_ylim([0,2])
+plt.tight_layout()
+plt.title('Confusion matrix for Random Forest', y=1.1)
+plt.ylabel('Actual label')
+plt.xlabel('Predicted label')
+
+# print precision and recall values
+print(classification_report(full_df_test_y, rf_full_pred))
+
+# TPR/TNR rates
+print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
+      round(recall_score(full_df_test_y, rf_full_pred) * 100, 2),'%')
+print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
+    round(tn / (tn + fp) * 100, 2),'%')
+
+####
+# End rf lasso prediction prints
+####
+
+####
+# Start knn pearsons prediction prints
+####
+
+# confusion matrix for random forest 8/8
+cm_one = confusion_matrix(pearsons_scaled_df_test_y, knn_pearsons_pred)
+tn, fp, fn, tp  = confusion_matrix(pearsons_scaled_df_test_y, \
+                                   knn_pearsons_pred).ravel()
+
+# Create confusion matrix heatmap
+# setup class names and tick marks
+class_names=[0,1]
+fig, ax = plt.subplots()
+tick_marks = np.arange(len(class_names))
+plt.xticks(tick_marks, class_names)
+plt.yticks(tick_marks, class_names)
+
+# Create heatmap and labels
+sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
+ax.xaxis.set_label_position("top")
+ax.set_ylim([0,2])
+plt.tight_layout()
+plt.title('Confusion matrix for KNN Pearsons', y=1.1)
+plt.ylabel('Actual label')
+plt.xlabel('Predicted label')
+
+# print precision and recall values
+print(classification_report(pearsons_scaled_df_test_y, knn_pearsons_pred))
+
+# TPR/TNR rates
+print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
+      round(recall_score(pearsons_scaled_df_test_y, knn_pearsons_pred) * 100, 2),'%')
+print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
+    round(tn / (tn + fp) * 100, 2),'%')
+
+####
+# End knn pearsons prediction prints
+####
+
+####
+# Start knn ols prediction prints
+####
+
+# confusion matrix for random forest 8/8
+cm_one = confusion_matrix(ols_scaled_df_test_y, knn_ols_pred)
+tn, fp, fn, tp  = confusion_matrix(ols_scaled_df_test_y, \
+                                   knn_ols_pred).ravel()
+
+# Create confusion matrix heatmap
+# setup class names and tick marks
+class_names=[0,1]
+fig, ax = plt.subplots()
+tick_marks = np.arange(len(class_names))
+plt.xticks(tick_marks, class_names)
+plt.yticks(tick_marks, class_names)
+
+# Create heatmap and labels
+sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
+ax.xaxis.set_label_position("top")
+ax.set_ylim([0,2])
+plt.tight_layout()
+plt.title('Confusion matrix for KNN Pearsons', y=1.1)
+plt.ylabel('Actual label')
+plt.xlabel('Predicted label')
+
+# print precision and recall values
+print(classification_report(ols_scaled_df_test_y, knn_ols_pred))
+
+# TPR/TNR rates
+print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
+      round(recall_score(ols_scaled_df_test_y, knn_ols_pred) * 100, 2),'%')
+print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
+    round(tn / (tn + fp) * 100, 2),'%')
+
+####
+# End knn ols prediction prints
+####
+
+####
+# Start knn rfe prediction prints
+####
+
+# confusion matrix for random forest 8/8
+cm_one = confusion_matrix(rfe_scaled_df_test_y, knn_rfe_pred)
+tn, fp, fn, tp  = confusion_matrix(rfe_scaled_df_test_y, \
+                                   knn_rfe_pred).ravel()
+
+# Create confusion matrix heatmap
+# setup class names and tick marks
+class_names=[0,1]
+fig, ax = plt.subplots()
+tick_marks = np.arange(len(class_names))
+plt.xticks(tick_marks, class_names)
+plt.yticks(tick_marks, class_names)
+
+# Create heatmap and labels
+sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
+ax.xaxis.set_label_position("top")
+ax.set_ylim([0,2])
+plt.tight_layout()
+plt.title('Confusion matrix for KNN Pearsons', y=1.1)
+plt.ylabel('Actual label')
+plt.xlabel('Predicted label')
+
+# print precision and recall values
+print(classification_report(rfe_scaled_df_test_y, knn_rfe_pred))
+
+# TPR/TNR rates
+print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
+      round(recall_score(rfe_scaled_df_test_y, knn_rfe_pred) * 100, 2),'%')
+print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
+    round(tn / (tn + fp) * 100, 2),'%')
+
+####
+# End knn rfe prediction prints
+####
+
+####
+# Start knn lasso prediction prints
+####
+
+# confusion matrix for random forest 8/8
+cm_one = confusion_matrix(lasso_scaled_df_test_y, knn_lasso_pred)
+tn, fp, fn, tp  = confusion_matrix(lasso_scaled_df_test_y, \
+                                   knn_lasso_pred).ravel()
+
+# Create confusion matrix heatmap
+# setup class names and tick marks
+class_names=[0,1]
+fig, ax = plt.subplots()
+tick_marks = np.arange(len(class_names))
+plt.xticks(tick_marks, class_names)
+plt.yticks(tick_marks, class_names)
+
+# Create heatmap and labels
+sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
+ax.xaxis.set_label_position("top")
+ax.set_ylim([0,2])
+plt.tight_layout()
+plt.title('Confusion matrix for KNN Pearsons', y=1.1)
+plt.ylabel('Actual label')
+plt.xlabel('Predicted label')
+
+# print precision and recall values
+print(classification_report(lasso_scaled_df_test_y, knn_lasso_pred))
+
+# TPR/TNR rates
+print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
+      round(recall_score(lasso_scaled_df_test_y, knn_lasso_pred) * 100, 2),'%')
+print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
+    round(tn / (tn + fp) * 100, 2),'%')
+
+####
+# End knn lasso prediction prints
 ####
