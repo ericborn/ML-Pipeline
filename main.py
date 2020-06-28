@@ -17,14 +17,18 @@ https://www.kaggle.com/jpacse/datasets-for-churn-telecom
 import os
 import time
 import operator
+from sys import exit
+
 import numpy as np
 import pandas as pd
-import seaborn as sns
+
+import lightgbm as lgb
 import statsmodels.api as sm
+import seaborn as sns
+import matplotlib as mpl
 import matplotlib.pyplot as plt
-from sys import exit
-from sklearn import svm
-from sklearn import tree
+
+from sklearn import svm, tree, preprocessing as pp
 from sklearn.feature_selection import RFE
 from sklearn.naive_bayes import GaussianNB
 from sklearn.preprocessing import StandardScaler
@@ -33,15 +37,20 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LassoCV, LogisticRegression, LinearRegression
 from sklearn.metrics import confusion_matrix, recall_score,\
-                            classification_report
+                            classification_report, roc_curve, auc
 
-# Set display options for dataframes
+# Set display options for pandas
 #pd.set_option('display.max_rows', 100)
 #pd.set_option('display.width', 500)
 pd.set_option('display.max_columns', 60)
+pd.set_option('display.float_format', lambda x: '%.3f' % x)
 
-# set seaborn to dark backgrounds
+# set seaborn to dark backgrounds, matplot to use seaborn
 sns.set_style("darkgrid")
+mpl.style.use('seaborn')
+
+# numpy print precision
+np.set_printoptions(precision=4, suppress=True)
 
 ################
 # Start data import and cleanup
@@ -70,12 +79,20 @@ except Exception as e:
 print('The total length of the dataframe is', main_df.shape[0], 'rows',
       'and the width is', main_df.shape[1], 'columns')
 
+# calculate the percentage of churn
+churn_percentage = (main_df[main_df['Churn'] == 'Yes'].shape[0]/ \
+                       main_df.shape[0] * 100)
+
 # total Churn/No Churn
 print('The churn stats of the dataframe is\n', 
       'No:', main_df.Churn.value_counts()[0], '\n',
       'Yes:', main_df.Churn.value_counts()[1], '\n',
-      'Ratio of', round(main_df.Churn.value_counts()[0]/
-                  main_df.Churn.value_counts()[1], 2),': 1')
+      '{:.2f}% of the data are churn examples (highly skewed).'.format(\
+       churn_percentage))
+
+# plot Yes vs No churn
+ax = sns.countplot(data=main_df, x = 'Churn')
+
 
 # find count of columns with null and 0 values
 nulls = {}
@@ -104,6 +121,8 @@ main_df['Churn'] = main_df['Churn'].apply(lambda x: 1 if x == 'Yes' else 0)
 
 # Create an area code column out of the ServiceArea column
 main_df['AreaCode'] = main_df['ServiceArea'].str[-3:]
+
+
 
 # convery categorical data to numerical
 main_df['ChildrenInHH'] = main_df['ChildrenInHH'].apply(lambda x: 1 \
@@ -166,41 +185,40 @@ main_df.loc[main_df['HandsetPrice'] == 'Unknown', 'HandsetPrice'] = 0
 # 7-Lowest
 main_df['CreditRating'] = main_df['CreditRating'].str[:1]
 
-
-# Town = 1
+# Other = 0
+# Rural = 1
 # Suburban = 2
-# Rural = 3
-# Other = 4
-main_df.loc[main_df['PrizmCode'] == 'Town', 'PrizmCode'] = 1
-main_df.loc[main_df['PrizmCode'] == 'Suburban', 'PrizmCode'] = 2
-main_df.loc[main_df['PrizmCode'] == 'Rural', 'PrizmCode'] = 3
-main_df.loc[main_df['PrizmCode'] == 'Other', 'PrizmCode'] = 4
+# Town = 3
 
+# setup label encoder
+le = pp.LabelEncoder()
 
-# Clerical = 1
-# Crafts = 2
-# Homemaker = 3
-# Other = 4
-# Professional = 5
-# Retired = 6
-# Self = 7
-# Student = 8
-main_df.loc[main_df['Occupation'] == 'Clerical', 'Occupation'] = 1
-main_df.loc[main_df['Occupation'] == 'Crafts', 'Occupation'] = 2
-main_df.loc[main_df['Occupation'] == 'Homemaker', 'Occupation'] = 3
-main_df.loc[main_df['Occupation'] == 'Other', 'Occupation'] = 4
-main_df.loc[main_df['Occupation'] == 'Professional', 'Occupation'] = 5
-main_df.loc[main_df['Occupation'] == 'Retired', 'Occupation'] = 6
-main_df.loc[main_df['Occupation'] == 'Self', 'Occupation'] = 7
-main_df.loc[main_df['Occupation'] == 'Student', 'Occupation'] = 8
+# fit values to categories
+le.fit(main_df['PrizmCode'])
+
+# apply values
+main_df['PrizmCode'] = le.transform(main_df['PrizmCode'])
+
+# Clerical = 0
+# Crafts = 1
+# Homemaker = 2
+# Other = 3
+# Professional = 4
+# Retired = 5
+# Self = 6
+# Student = 7
+le = pp.LabelEncoder()
+le.fit(main_df['Occupation'])
+#list(le.classes_)
+main_df['Occupation'] = le.transform(main_df['Occupation'])
 
 # yes = 1
 # no = 2
 # unknown = 3
-main_df.loc[main_df['MaritalStatus'] == 'Yes', 'MaritalStatus'] = 1
-main_df.loc[main_df['MaritalStatus'] == 'No', 'MaritalStatus'] = 2
-main_df.loc[main_df['MaritalStatus'] == 'Unknown', 'MaritalStatus'] = 3
-
+le = pp.LabelEncoder()
+le.fit(main_df['MaritalStatus'])
+#list(le.classes_)
+main_df['MaritalStatus'] = le.transform(main_df['MaritalStatus'])
 
 # replaces all NaN with 0
 main_df = main_df.fillna(0)
@@ -241,6 +259,134 @@ plot_churn_values(main_df, column='CreditRating')
 ################
 # End data import and cleanup
 ################
+
+
+# creates a list of column names
+cols = list(main_x.columns)
+
+# copy the main df for scaling
+main_x_scaled = main_x
+
+# Setup scaler for the first 28 columns which contain non-catagorical data
+scaler = StandardScaler()
+main_x_scaled[cols[0:29]] = scaler.fit_transform(main_x_scaled[cols[0:29]])
+
+# Split dataset into 33% test 66% training
+(main_scaled_df_train_x, main_scaled_df_test_x, 
+ main_scaled_df_train_y, main_scaled_df_test_y) = (
+        train_test_split(main_x_scaled, main_y, test_size = 0.333, 
+                         random_state=1337))
+
+################
+# Start LGBM
+# model setup and parameters found here:
+# https://www.kaggle.com/avanwyk/a-lightgbm-overview
+################
+
+# setup lgb training and test datasets
+lgb_train = lgb.Dataset(main_scaled_df_train_x, main_scaled_df_train_y, \
+                        free_raw_data=False)
+lgb_test = lgb.Dataset(main_scaled_df_test_x, main_scaled_df_test_y, \
+                      reference=lgb_train, free_raw_data=False)
+
+
+
+# set parameters to be used for LGB
+# gradient boosted decision tree
+# optimization object is binary
+# learning rate controls the step size
+# number of leaves in one tree
+# number of processor threads
+# area under curve (auc) for calculating during validation
+core_params = {
+    'boosting_type': 'gbdt',
+    'objective': 'binary',
+    'learning_rate': 0.05,
+    'num_leaves': 31,
+    'nthread': 6,
+    'metric': 'auc' 
+}
+
+advanced_params = {
+    'boosting_type': 'gbdt',
+    'objective': 'binary',
+    'metric': 'auc',
+    
+    'learning_rate': 0.01,
+    'num_leaves': 100, # more leaves increases accuracy, but may lead to overfitting.
+    
+    'max_depth': 10, # the maximum tree depth. Shallower trees reduce overfitting.
+    'min_split_gain': 0, # minimal loss gain to perform a split
+    'min_child_samples': 21, # or min_data_in_leaf: specifies the minimum samples per leaf node.
+    'min_child_weight': 5, # minimal sum hessian in one leaf. Controls overfitting.
+    
+    'lambda_l1': 0.5, # L1 regularization
+    'lambda_l2': 0.5, # L2 regularization
+    
+    'feature_fraction': 0.5, # randomly select a fraction of the features before building each tree.
+    # Speeds up training and controls overfitting.
+    'bagging_fraction': 0.5, # allows for bagging or subsampling of data to speed up training.
+    'bagging_freq': 0, # perform bagging on every Kth iteration, disabled if 0.
+    
+    'scale_pos_weight': 99, # add a weight to the positive class examples (compensates for imbalance).
+    
+    'subsample_for_bin': 200000, # amount of data to sample to determine histogram bins
+    'max_bin': 1000, # the maximum number of bins to bucket feature values in.
+    # LightGBM autocompresses memory based on this value. Larger bins improves accuracy.
+    
+    'nthread': 6, # number of threads to use for LightGBM, best set to number of actual cores.
+}
+
+# create a gradient boosted decision tree using LGBM
+# boost_rounds = number of iterations
+# stop training if none of the metrics improves on any validation data
+def train_gbm(params, training_set, testing_set, init_gbm=None, 
+              boost_rounds=100, early_stopping_rounds=0, metric='auc'):
+    evals_result = {} 
+
+    # uses the core_params dictionary for settings
+    gbm = lgb.train(params, 
+                    training_set,
+                    init_model = init_gbm,
+                    num_boost_round = boost_rounds, 
+                    early_stopping_rounds = early_stopping_rounds,
+                    valid_sets = training_set,
+                    evals_result = evals_result,
+                    verbose_eval = False)
+    
+    y_true = training_set.label
+    y_pred = gbm.predict(training_set.data)
+    fpr, tpr, threshold = roc_curve(y_true, y_pred)
+    roc_auc = auc(fpr, tpr)
+    
+    plt.title("ROC Curve. Area under Curve: {:.3f}".format(roc_auc))
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    _ = plt.plot(fpr, tpr, 'r')
+    
+    return gbm, evals_result
+
+# build the core parameters model
+model, evals = train_gbm(core_params, lgb_train, lgb_test)
+
+# build the advanced parameters model
+model, evals = train_gbm(advanced_params, lgb_train, lgb_test, \
+                         boost_rounds = 1000)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ################
 # Start attribute selection with various methods
