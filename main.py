@@ -59,15 +59,18 @@ csv_file = os.path.join(input_dir, data + '.csv')
 # read csv file into dataframe
 try:
     main_df = pd.read_csv(csv_file)
-    print('opened file for LoL data: ', data, '\n')
+    print('opened data file: ', data, '\n')
 
 except Exception as e:
     print(e)
-    exit('Failed to read LoL data from: '+ str(data)+'.csv')
+    exit('Failed to read data from: '+ str(data)+'.csv')
 
 # describe the total rows and columns
 print('The total length of the dataframe is', main_df.shape[0], 'rows',
       'and the width is', main_df.shape[1], 'columns')
+
+# total Churn/No Churn
+print(main_df.Churn.value_counts())
 
 # create a class label using 0 or 1 to indicate churnning team
 # 0 = no churn
@@ -181,28 +184,8 @@ main_df['HandsetPrice'] = main_df['HandsetPrice'].astype('int64')
 main_df['CreditRating'] = main_df['CreditRating'].astype('int64')
 main_df['AreaCode'] = main_df['AreaCode'].astype('int64')
 
-
 # remove columns customerId and ServiceArea
 main_df.drop(main_df.columns[[0,26]], axis = 1, inplace = True)
-
-## write modified data to csv
-## desired csv filename
-#name = 'LoL'
-#
-## save directory
-#input_dir = r'C:\Users\TomBrody\Desktop\School\677\Final'
-#
-## Create an output file name
-#output_file = os.path.join(input_dir, name + '.csv')
-#
-## write df to csv
-#main_df.to_csv(output_file, index=False)
-
-# view row 89, all columns
-#main_df.iloc[89,:]
-
-# 57 columns remaining
-#print(main_df.head())
 
 # x stores all columns except for the Churn column
 main_x = main_df.drop('Churn', 1)
