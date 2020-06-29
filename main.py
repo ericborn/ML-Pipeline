@@ -1822,10 +1822,10 @@ timings_list.append(['Knn duration:', time.time()])
 #
 # Create empty lists to store the models error rate and 
 # accuracy across various K's
-error_rate = []
-accuracy = []
-k_value = []
-
+#error_rate = []
+#accuracy = []
+#k_value = []
+#
 ## For loop to test the model using various neighbor sizes
 ## with k neighbors set to 3 to 25
 #try:
@@ -2092,147 +2092,146 @@ k_value = []
 ## end lasso dataset
 #####
 #
-
-####
-# Start ten dataset
-####
-
-# Create empty lists to store the models error rate and 
-# accuracy across various K's
-error_rate = []
-accuracy = []
-k_value = []
-
-# For loop to test the model using various neighbor sizes
-# with k neighbors set to 3 to 25
-try:
-    for k in range (9, 31, 2):
-        # Create the classifier with neighbors set to k from the loop
-        knn_classifier = KNeighborsClassifier(n_neighbors = k)
-       
-        # Train the classifier
-        knn_classifier.fit(ten_scaled_df_train_x, 
-                           ten_scaled_df_train_y)
-        
-        # Perform predictions
-        pred_k = knn_classifier.predict(ten_scaled_df_test_x)
-        
-        # Store error rate and accuracy for particular K value
-        k_value.append(k)
-        error_rate.append(round(np.mean(
-                pred_k != ten_scaled_df_test_y) * 100, 2))
-        
-        accuracy.append(round(sum(
-                pred_k == ten_scaled_df_test_y) / len(pred_k) * 100, 2))
-        
-except Exception as e:
-    print(e)
-    print('failed to build the KNN classifier.')
-
-for i in range(len(accuracy)):
-    print('The accuracy on the lasso data when K =', k_value[i], 
-          'is:', accuracy[i])
-    
-# create a plot to display the accuracy of the model across K
-fig = plt.figure(figsize=(10, 4))
-ax = plt.gca()
-plt.plot(range(9, 31, 2), accuracy, color ='blue',
-         marker = 'o', markerfacecolor = 'black', markersize = 10)
-plt.title('Accuracy vs. k for the lasso dataset')
-plt.xlabel('Number of neighbors: k')
-plt.ylabel('Accuracy')
-
-# find the index of the highest accuracy
-max_index = accuracy.index(max(accuracy))
-
-# store the accuracy value
-highest_accuracy = accuracy[max_index]
-
-# append to accuracy list
-global_accuracy.append(accuracy[max_index])
-
-# store the best k value
-best_k = [k_value[max_index]]
-
-#best_set = 'pearson five'
-
-print('The most accurate k for the lasso attribute selection is', 
-      k_value[max_index], 'at', accuracy[max_index],'%')
-
-####
-# end ten dataset
-####
-
-####
-# Start ten dataset
-####
-
-# Create empty lists to store the models error rate and 
-# accuracy across various K's
-error_rate = []
-accuracy = []
-k_value = []
-
-# For loop to test the model using various neighbor sizes
-# with k neighbors set to 3 to 25
-try:
-    for k in range (9, 31, 2):
-        # Create the classifier with neighbors set to k from the loop
-        knn_classifier = KNeighborsClassifier(n_neighbors = k)
-       
-        # Train the classifier
-        knn_classifier.fit(twenty_scaled_df_train_x, 
-                           twenty_scaled_df_train_y)
-        
-        # Perform predictions
-        pred_k = knn_classifier.predict(twenty_scaled_df_test_x)
-        
-        # Store error rate and accuracy for particular K value
-        k_value.append(k)
-        error_rate.append(round(np.mean(
-                pred_k != twenty_scaled_df_test_y) * 100, 2))
-        
-        accuracy.append(round(sum(
-                pred_k == twenty_scaled_df_test_y) / len(pred_k) * 100, 2))
-        
-except Exception as e:
-    print(e)
-    print('failed to build the KNN classifier.')
-
-for i in range(len(accuracy)):
-    print('The accuracy on the lasso data when K =', k_value[i], 
-          'is:', accuracy[i])
-    
-# create a plot to display the accuracy of the model across K
-fig = plt.figure(figsize=(10, 4))
-ax = plt.gca()
-plt.plot(range(9, 31, 2), accuracy, color ='blue',
-         marker = 'o', markerfacecolor = 'black', markersize = 10)
-plt.title('Accuracy vs. k for the lasso dataset')
-plt.xlabel('Number of neighbors: k')
-plt.ylabel('Accuracy')
-
-# find the index of the highest accuracy
-max_index = accuracy.index(max(accuracy))
-
-# store the accuracy value
-highest_accuracy = accuracy[max_index]
-
-# append to accuracy list
-global_accuracy.append(accuracy[max_index])
-
-# store the best k value
-best_k = [k_value[max_index]]
-
-#best_set = 'pearson five'
-
-print('The most accurate k for the lasso attribute selection is', 
-      k_value[max_index], 'at', accuracy[max_index],'%')
-
-####
-# end ten dataset
-####
-
+#
+#####
+## Start ten dataset
+#####
+#
+## Create empty lists to store the models error rate and 
+## accuracy across various K's
+#error_rate = []
+#accuracy = []
+#k_value = []
+#
+## For loop to test the model using various neighbor sizes
+## with k neighbors set to 3 to 25
+#try:
+#    for k in range (30, 55, 2):
+#        # Create the classifier with neighbors set to k from the loop
+#        knn_classifier = KNeighborsClassifier(n_neighbors = k)
+#       
+#        # Train the classifier
+#        knn_classifier.fit(ten_scaled_df_train_x, 
+#                           ten_scaled_df_train_y)
+#        
+#        # Perform predictions
+#        pred_k = knn_classifier.predict(ten_scaled_df_test_x)
+#        
+#        # Store error rate and accuracy for particular K value
+#        k_value.append(k)
+#        error_rate.append(round(np.mean(
+#                pred_k != ten_scaled_df_test_y) * 100, 2))
+#        
+#        accuracy.append(round(sum(
+#                pred_k == ten_scaled_df_test_y) / len(pred_k) * 100, 2))
+#        
+#except Exception as e:
+#    print(e)
+#    print('failed to build the KNN classifier.')
+#
+#for i in range(len(accuracy)):
+#    print('The accuracy on the lasso data when K =', k_value[i], 
+#          'is:', accuracy[i])
+#    
+## create a plot to display the accuracy of the model across K
+#fig = plt.figure(figsize=(10, 4))
+#ax = plt.gca()
+#plt.plot(range(30, 55, 2), accuracy, color ='blue',
+#         marker = 'o', markerfacecolor = 'black', markersize = 10)
+#plt.title('Accuracy vs. k for the ten dataset')
+#plt.xlabel('Number of neighbors: k')
+#plt.ylabel('Accuracy')
+#
+## find the index of the highest accuracy
+#max_index = accuracy.index(max(accuracy))
+#
+## store the accuracy value
+#highest_accuracy = accuracy[max_index]
+#
+## append to accuracy list
+#global_accuracy.append(accuracy[max_index])
+#
+## store the best k value
+#best_k = [k_value[max_index]]
+#
+##best_set = 'pearson five'
+#
+#print('The most accurate k for the lasso attribute selection is', 
+#      k_value[max_index], 'at', accuracy[max_index],'%')
+#
+#####
+## end ten dataset
+#####
+#
+#####
+## Start twenty dataset
+#####
+#
+## Create empty lists to store the models error rate and 
+## accuracy across various K's
+#error_rate = []
+#accuracy = []
+#k_value = []
+#
+## For loop to test the model using various neighbor sizes
+## with k neighbors set to 3 to 25
+#try:
+#    for k in range (45, 70, 2):
+#        # Create the classifier with neighbors set to k from the loop
+#        knn_classifier = KNeighborsClassifier(n_neighbors = k)
+#       
+#        # Train the classifier
+#        knn_classifier.fit(twenty_scaled_df_train_x, 
+#                           twenty_scaled_df_train_y)
+#        
+#        # Perform predictions
+#        pred_k = knn_classifier.predict(twenty_scaled_df_test_x)
+#        
+#        # Store error rate and accuracy for particular K value
+#        k_value.append(k)
+#        error_rate.append(round(np.mean(
+#                pred_k != twenty_scaled_df_test_y) * 100, 2))
+#        
+#        accuracy.append(round(sum(
+#                pred_k == twenty_scaled_df_test_y) / len(pred_k) * 100, 2))
+#        
+#except Exception as e:
+#    print(e)
+#    print('failed to build the KNN classifier.')
+#
+#for i in range(len(accuracy)):
+#    print('The accuracy on the lasso data when K =', k_value[i], 
+#          'is:', accuracy[i])
+#    
+## create a plot to display the accuracy of the model across K
+#fig = plt.figure(figsize=(10, 4))
+#ax = plt.gca()
+#plt.plot(range(45, 70, 2), accuracy, color ='blue',
+#         marker = 'o', markerfacecolor = 'black', markersize = 10)
+#plt.title('Accuracy vs. k for the twenty dataset')
+#plt.xlabel('Number of neighbors: k')
+#plt.ylabel('Accuracy')
+#
+## find the index of the highest accuracy
+#max_index = accuracy.index(max(accuracy))
+#
+## store the accuracy value
+#highest_accuracy = accuracy[max_index]
+#
+## append to accuracy list
+#global_accuracy.append(accuracy[max_index])
+#
+## store the best k value
+#best_k = [k_value[max_index]]
+#
+##best_set = 'pearson five'
+#
+#print('The most accurate k for the lasso attribute selection is', 
+#      k_value[max_index], 'at', accuracy[max_index],'%')
+#
+#####
+## end twenty dataset
+#####
 
 ########
 ## end KNN evaluation
@@ -2342,13 +2341,69 @@ knn_lasso_pred = knn_classifier.predict(lasso_scaled_df_test_x)
        
 # store accuracy
 global_accuracy.append(100-(round(np.mean(knn_lasso_pred
-                                          != rfe_scaled_df_test_y),2)))
+                                          != lasso_scaled_df_test_y),2)))
 
 # end time
 algorithm_duration_list.append(time.time()) 
 
 ####
 # end lasso dataset
+####
+
+####
+# Start ten dataset
+####
+
+# start time
+#algorithm_duration_list.append(time.time())
+
+# initalize knn
+knn_classifier = KNeighborsClassifier(n_neighbors = 47)
+
+# Train the classifier
+knn_classifier.fit(ten_scaled_df_train_x, 
+                   ten_scaled_df_train_y)
+ 
+# store predictions
+knn_ten_pred = knn_classifier.predict(ten_scaled_df_test_x)
+       
+# store accuracy
+global_accuracy.append(100-(round(np.mean(knn_ten_pred
+                                          != ten_scaled_df_test_y),2)))
+
+# end time
+#algorithm_duration_list.append(time.time()) 
+
+####
+# end ten dataset
+####
+
+####
+# Start twenty dataset
+####
+
+# start time
+#algorithm_duration_list.append(time.time())
+
+# initalize knn
+knn_classifier = KNeighborsClassifier(n_neighbors = 61)
+
+# Train the classifier
+knn_classifier.fit(twenty_scaled_df_train_x, 
+                   twenty_scaled_df_train_y)
+ 
+# store predictions
+knn_twenty_pred = knn_classifier.predict(twenty_scaled_df_test_x)
+       
+# store accuracy
+global_accuracy.append(100-(round(np.mean(knn_twenty_pred
+                                          != twenty_scaled_df_test_y),2)))
+
+# end time
+#algorithm_duration_list.append(time.time()) 
+
+####
+# end twenty dataset
 ####
 
 #######
@@ -3627,7 +3682,7 @@ sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
 ax.xaxis.set_label_position("top")
 ax.set_ylim([0,2])
 plt.tight_layout()
-plt.title('Confusion matrix for KNN Pearsons', y=1.1)
+plt.title('Confusion matrix for KNN Lasso', y=1.1)
 plt.ylabel('Actual label')
 plt.xlabel('Predicted label')
 
@@ -3642,4 +3697,82 @@ print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
 
 ####
 # End knn lasso prediction prints
+####
+
+####
+# Start knn ten prediction prints
+####
+
+# confusion matrix for random forest 8/8
+cm_one = confusion_matrix(ten_scaled_df_test_y, knn_ten_pred)
+tn, fp, fn, tp  = confusion_matrix(ten_scaled_df_test_y, \
+                                   knn_ten_pred).ravel()
+
+# Create confusion matrix heatmap
+# setup class names and tick marks
+class_names=[0,1]
+fig, ax = plt.subplots()
+tick_marks = np.arange(len(class_names))
+plt.xticks(tick_marks, class_names)
+plt.yticks(tick_marks, class_names)
+
+# Create heatmap and labels
+sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
+ax.xaxis.set_label_position("top")
+ax.set_ylim([0,2])
+plt.tight_layout()
+plt.title('Confusion matrix for KNN Ten', y=1.1)
+plt.ylabel('Actual label')
+plt.xlabel('Predicted label')
+
+# print precision and recall values
+print(classification_report(ten_scaled_df_test_y, knn_ten_pred))
+
+# TPR/TNR rates
+print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
+      round(recall_score(ten_scaled_df_test_y, knn_ten_pred) * 100, 2),'%')
+print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
+    round(tn / (tn + fp) * 100, 2),'%')
+
+####
+# End knn ten prediction prints
+####
+
+####
+# Start knn twenty prediction prints
+####
+
+# confusion matrix for random forest 8/8
+cm_one = confusion_matrix(twenty_scaled_df_test_y, knn_twenty_pred)
+tn, fp, fn, tp  = confusion_matrix(twenty_scaled_df_test_y, \
+                                   knn_twenty_pred).ravel()
+
+# Create confusion matrix heatmap
+# setup class names and tick marks
+class_names=[0,1]
+fig, ax = plt.subplots()
+tick_marks = np.arange(len(class_names))
+plt.xticks(tick_marks, class_names)
+plt.yticks(tick_marks, class_names)
+
+# Create heatmap and labels
+sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
+ax.xaxis.set_label_position("top")
+ax.set_ylim([0,2])
+plt.tight_layout()
+plt.title('Confusion matrix for KNN Ten', y=1.1)
+plt.ylabel('Actual label')
+plt.xlabel('Predicted label')
+
+# print precision and recall values
+print(classification_report(twenty_scaled_df_test_y, knn_twenty_pred))
+
+# TPR/TNR rates
+print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
+      round(recall_score(twenty_scaled_df_test_y, knn_twenty_pred) * 100, 2),'%')
+print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
+    round(tn / (tn + fp) * 100, 2),'%')
+
+####
+# End knn twenty prediction prints
 ####
