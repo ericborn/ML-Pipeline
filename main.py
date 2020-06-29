@@ -389,7 +389,7 @@ def train_gbm(params, training_set, testing_set, init_gbm=None,
 #model, evals = 0, 0
 
 # build the core parameters model
-model, evals = train_gbm(core_params, lgb_train, lgb_test)
+#model, evals = train_gbm(core_params, lgb_train, lgb_test)
 
 # build the advanced parameters model
 model, evals = train_gbm(advanced_params, lgb_train, lgb_test, \
@@ -398,18 +398,28 @@ model, evals = train_gbm(advanced_params, lgb_train, lgb_test, \
 # predicted value of y
 model_pred_y = model.predict(main_scaled_df_test_x)
 
+# converts all predictions to 1 if > 0.5 otherwise 0
+model_pred_y_01 = np.where(model_pred_y > 0.5, 1, 0)
+
 model_test_results = pd.DataFrame({'trueValue': main_scaled_df_test_y, \
                                    'predictedValue': model_pred_y})
 
-print((model_test_results.predictedValue[model_test_results.trueValue == \
-                                          0].shape[0],
-       model_test_results.predictedValue[model_test_results.trueValue == 1\
-                                          ].shape[0]))
+# store accuracy
+global_accuracy.append(100-(round(np.mean(model_pred_y
+                                  != main_scaled_df_test_y),2)))
+    
+#print((model_test_results.predictedValue[model_test_results.trueValue == \
+#                                          0].shape[0],
+#       model_test_results.predictedValue[model_test_results.trueValue == 1\
+#                                          ].shape[0]))
 
-roc_scores = []
+# setup a list to save the roc scores
+roc_scores = {}
+roc_scores.update({'GBM1': roc_auc_score(model_test_results.trueValue, \
+                                model_test_results.predictedValue)})
 
-roc_scores.append(roc_auc_score(model_test_results.trueValue, \
-                                model_test_results.predictedValue))
+#roc_scores.append(roc_auc_score(model_test_results.trueValue, \
+#                                model_test_results.predictedValue))
 
 # build another advanced model based on the first model
 model2, evals2 = train_gbm(advanced_params, lgb_train, lgb_test, \
@@ -418,21 +428,31 @@ model2, evals2 = train_gbm(advanced_params, lgb_train, lgb_test, \
 # predicted value of y
 model_pred_y2 = model2.predict(main_scaled_df_test_x)
 
+# converts all predictions to 1 if > 0.5 otherwise 0
+model_pred_y2_01 = np.where(model_pred_y2 > 0.5, 1, 0)
+
 # save model to txt file
 #model.save_model('cell_churn.txt')
 
 model_test_results2 = pd.DataFrame({'trueValue': main_scaled_df_test_y, \
                                    'predictedValue': model_pred_y2})
 
-print((model_test_results2.predictedValue[model_test_results2.trueValue == \
-                                          0].shape[0],
-       model_test_results2.predictedValue[model_test_results2.trueValue == 1\
-                                          ].shape[0]))
+# store accuracy
+global_accuracy.append(100-(round(np.mean(model_pred_y2
+                                  != main_scaled_df_test_y),2)))
+    
+#print((model_test_results2.predictedValue[model_test_results2.trueValue == \
+#                                          0].shape[0],
+#       model_test_results2.predictedValue[model_test_results2.trueValue == 1\
+#                                          ].shape[0]))
 
-roc_scores.append(roc_auc_score(model_test_results2.trueValue, \
-                                model_test_results2.predictedValue))
+roc_scores.update({'GBM2': roc_auc_score(model_test_results2.trueValue, \
+                                model_test_results2.predictedValue)})
 
-print(roc_scores)
+#roc_scores.append(roc_auc_score(model_test_results2.trueValue, \
+#                                model_test_results2.predictedValue))
+
+#print(roc_scores)
 
 ############
 ## End building gbm model
@@ -455,7 +475,7 @@ for feat in range(len(model.feature_importance())):
 feat_importance = {k: v for k, v in sorted(feat_importance.items(), \
                                            key=lambda item: item[1], \
                                            reverse = True)}   
-
+   
 # create a top 10 list of features
 feat_importance_ten = {}
 for i in range(10):
@@ -476,8 +496,8 @@ plt.title('Feature Importance')
 plt.ylabel('Features')
 plt.xlabel('Importance Value')
 
+# create lists of the features
 features_list_ten = list(feat_importance_ten.keys())
-
 features_list_twenty = list(feat_importance_twenty.keys())
 
 ################
@@ -490,29 +510,29 @@ timings_list.append(['Features selection duration:', time.time()])
 # Start Pearsons corerelation
 #######
 
-# create a correlation object
-cor = main_df.corr()
-
-# correlation with output variable
-cor_target = abs(cor['Churn'])
-
-# selecting features correlated greater than 0.5
-relevant_features = cor_target[cor_target > 0.1]
+## create a correlation object
+#cor = main_df.corr()
+#
+## correlation with output variable
+#cor_target = abs(cor['Churn'])
+#
+## selecting features correlated greater than 0.5
+#relevant_features = cor_target[cor_target > 0.1]
 
 # create a dataframe from the highest correlated item
 pearsons_df = main_df[['CurrentEquipmentDays']]
 
 #########################
-# results for the top 5 and top 10 attributes
-print('Pearsons top attribute:')
-print(list(pearsons_df.columns), '\n')
-
-# Create correlation matrix for > 0.5 correlation
-fig = plt.figure(figsize=(10,10))
-sns.heatmap(main_df[['Churn', 'CurrentEquipmentDays']].corr(), 
-            annot=True, vmin=-1, vmax=1, center=0, cmap="coolwarm", fmt='.2f',
-            linewidths=2, linecolor='black')
-plt.title('Correlation matrix for > 0.5 correlation', y=1.1)
+## results for the top 5 and top 10 attributes
+#print('Pearsons top attribute:')
+#print(list(pearsons_df.columns), '\n')
+#
+## Create correlation matrix for > 0.5 correlation
+#fig = plt.figure(figsize=(10,10))
+#sns.heatmap(main_df[['Churn', 'CurrentEquipmentDays']].corr(), 
+#            annot=True, vmin=-1, vmax=1, center=0, cmap="coolwarm", fmt='.2f',
+#            linewidths=2, linecolor='black')
+#plt.title('Correlation matrix for > 0.5 correlation', y=1.1)
 
 #######
 # Start Ordinary Least Squares
@@ -558,38 +578,38 @@ ols_df = main_df[selected_features_BE]
 # Start Recursive Feature Elimination
 ######
 
-#####
-# only used to determine optimum number of attributes
-#####
-
-# Total number of features
-nof_list = np.arange(1,57)            
-high_score = 0
-
-# Variable to store the optimum features
-nof = 0           
-score_list = []
-for n in range(len(nof_list)):
-    X_train, X_test, y_train, y_test = train_test_split(main_x, main_y, 
-                                            test_size = 0.3, random_state = 0)
-    model = LinearRegression()
-    rfe = RFE(model,nof_list[n])
-    X_train_rfe = rfe.fit_transform(X_train,y_train)
-    X_test_rfe = rfe.transform(X_test)
-    model.fit(X_train_rfe,y_train)
-    score = model.score(X_test_rfe,y_test)
-    score_list.append(score)
-    if(score > high_score):
-        high_score = score
-        nof = nof_list[n]
-
-# 55 features score of 0.033387
-print("Optimum number of features: %d" %nof)
-print("Score with %d features: %f" % (nof, high_score))
-
-#####
-# only used to determine optimum number of attributes
-#####
+######
+## only used to determine optimum number of attributes
+######
+#
+## Total number of features
+#nof_list = np.arange(1,57)            
+#high_score = 0
+#
+## Variable to store the optimum features
+#nof = 0           
+#score_list = []
+#for n in range(len(nof_list)):
+#    X_train, X_test, y_train, y_test = train_test_split(main_x, main_y, 
+#                                            test_size = 0.3, random_state = 0)
+#    model = LinearRegression()
+#    rfe = RFE(model,nof_list[n])
+#    X_train_rfe = rfe.fit_transform(X_train,y_train)
+#    X_test_rfe = rfe.transform(X_test)
+#    model.fit(X_train_rfe,y_train)
+#    score = model.score(X_test_rfe,y_test)
+#    score_list.append(score)
+#    if(score > high_score):
+#        high_score = score
+#        nof = nof_list[n]
+#
+## 55 features score of 0.033387
+#print("Optimum number of features: %d" %nof)
+#print("Score with %d features: %f" % (nof, high_score))
+#
+######
+## only used to determine optimum number of attributes
+######
 
 # setup column list and regression model
 cols = list(main_x.columns)
@@ -647,9 +667,9 @@ print("Total Features: " + str(sum(coef != 0)),
 timings_list.append(['features time end', time.time()])
 
 # output min, max and mean values for the lasso features
-lasso_df.min()
-lasso_df.max()
-lasso_df.mean()
+#lasso_df.min()
+#lasso_df.max()
+#lasso_df.mean()
 
 ################
 # End attribute selection with various methods
@@ -681,9 +701,9 @@ full_feature_set = set(flat_list)
 main_df[full_feature_set].describe()
 
 
-main_df[full_feature_set].min()
-main_df[full_feature_set].max()
-main_df[full_feature_set].mean()
+#main_df[full_feature_set].min()
+#main_df[full_feature_set].max()
+#main_df[full_feature_set].mean()
 
 ################
 # End five number summary setup 
@@ -865,72 +885,72 @@ timings_list.append(['frame build time end', time.time()])
 # End building test/train datasets with various attribute selections
 ################
 
-########
-# Start counts of the churn totals
-########
-
-# store number in variable for churn
-churn = sum(main_df.Churn == 1)
-pearsons_train_churn = sum(pearsons_df_train_y == 1)
-pearsons_test_churn  = sum(pearsons_df_test_y  == 1)
-ols_train_churn       = sum(ols_df_train_y       == 1)
-ols_test_churn        = sum(ols_df_test_y        == 1)
-rfe_train_churn       = sum(rfe_df_train_y       == 1)
-rfe_test_churn        = sum(rfe_df_test_y        == 1)
-lasso_train_churn     = sum(lasso_df_train_y     == 1)
-lasso_test_churn      = sum(lasso_df_test_y      == 1)
-
-# store number in variable for no churn
-no_churn = sum(main_df.Churn == 0)
-pearsons_train_no_churn = sum(pearsons_df_train_y == 0)
-pearsons_test_no_churn  = sum(pearsons_df_test_y  == 0)
-ols_train_no_churn       = sum(ols_df_train_y       == 0)
-ols_test_no_churn        = sum(ols_df_test_y        == 0)
-rfe_train_no_churn       = sum(rfe_df_train_y       == 0)
-rfe_test_no_churn        = sum(rfe_df_test_y        == 0)
-lasso_train_no_churn     = sum(lasso_df_train_y     == 0)
-lasso_test_no_churn      = sum(lasso_df_test_y      == 0)
-
-# create a ratio of the churns
-ratio = round(churn / no_churn, 4)
-
-pear_five_train_ratio = round(pearsons_train_churn / \
-                              pearsons_train_no_churn, 4)
-pear_five_test_ratio  = round(pearsons_test_churn / \
-                              pearsons_test_no_churn, 4)
-
-ols_train_ratio = round(ols_train_churn / ols_train_no_churn, 4)
-ols_test_ratio  = round(ols_test_churn / ols_test_no_churn, 4)
-
-rfe_train_ratio = round(rfe_train_churn / rfe_train_no_churn, 4)
-rfe_test_ratio  = round(rfe_test_churn / rfe_test_no_churn, 4)
-
-lasso_train_ratio = round(lasso_train_churn / lasso_train_no_churn, 4)
-lasso_test_ratio  = round(lasso_test_churn / lasso_test_no_churn, 4)
-
-# Print churn ratios
-print('\nOriginal dataset churn ratios\n','churn : no churn\n', str(ratio)+
-      ' :   1')
-print('\nPearson five training churn ratios\n','churn : no churn\n', 
-      str(pear_five_train_ratio)+' :   1')
-print('\nPearson five test churn ratios\n','churn : no churn\n', 
-      str(pear_five_test_ratio)+' :   1')
-print('\nOls training churn ratios\n','churn : no churn\n', 
-      str(ols_train_ratio)+' :   1')
-print('\nOls test churn ratios\n','churn : no churn\n', 
-      str(ols_test_ratio)+' :   1')
-print('\nRfe training churn ratios\n','churn : no churn\n', 
-      str(rfe_train_ratio)+' :   1')
-print('\nRfe test churn ratios\n','churn : no churn\n', 
-      str(rfe_test_ratio)+' :   1')
-print('\nLasso training churn ratios\n','churn : no churn\n', 
-      str(lasso_train_ratio)+' :   1')
-print('\nLasso test churn ratios\n','churn : no churn\n', 
-      str(lasso_test_ratio)+' :   1')
-
-########
-# End counts of the churn totals
-########
+#########
+## Start counts of the churn totals
+#########
+#
+## store number in variable for churn
+#churn = sum(main_df.Churn == 1)
+#pearsons_train_churn = sum(pearsons_df_train_y == 1)
+#pearsons_test_churn  = sum(pearsons_df_test_y  == 1)
+#ols_train_churn       = sum(ols_df_train_y       == 1)
+#ols_test_churn        = sum(ols_df_test_y        == 1)
+#rfe_train_churn       = sum(rfe_df_train_y       == 1)
+#rfe_test_churn        = sum(rfe_df_test_y        == 1)
+#lasso_train_churn     = sum(lasso_df_train_y     == 1)
+#lasso_test_churn      = sum(lasso_df_test_y      == 1)
+#
+## store number in variable for no churn
+#no_churn = sum(main_df.Churn == 0)
+#pearsons_train_no_churn = sum(pearsons_df_train_y == 0)
+#pearsons_test_no_churn  = sum(pearsons_df_test_y  == 0)
+#ols_train_no_churn       = sum(ols_df_train_y       == 0)
+#ols_test_no_churn        = sum(ols_df_test_y        == 0)
+#rfe_train_no_churn       = sum(rfe_df_train_y       == 0)
+#rfe_test_no_churn        = sum(rfe_df_test_y        == 0)
+#lasso_train_no_churn     = sum(lasso_df_train_y     == 0)
+#lasso_test_no_churn      = sum(lasso_df_test_y      == 0)
+#
+## create a ratio of the churns
+#ratio = round(churn / no_churn, 4)
+#
+#pear_five_train_ratio = round(pearsons_train_churn / \
+#                              pearsons_train_no_churn, 4)
+#pear_five_test_ratio  = round(pearsons_test_churn / \
+#                              pearsons_test_no_churn, 4)
+#
+#ols_train_ratio = round(ols_train_churn / ols_train_no_churn, 4)
+#ols_test_ratio  = round(ols_test_churn / ols_test_no_churn, 4)
+#
+#rfe_train_ratio = round(rfe_train_churn / rfe_train_no_churn, 4)
+#rfe_test_ratio  = round(rfe_test_churn / rfe_test_no_churn, 4)
+#
+#lasso_train_ratio = round(lasso_train_churn / lasso_train_no_churn, 4)
+#lasso_test_ratio  = round(lasso_test_churn / lasso_test_no_churn, 4)
+#
+## Print churn ratios
+#print('\nOriginal dataset churn ratios\n','churn : no churn\n', str(ratio)+
+#      ' :   1')
+#print('\nPearson five training churn ratios\n','churn : no churn\n', 
+#      str(pear_five_train_ratio)+' :   1')
+#print('\nPearson five test churn ratios\n','churn : no churn\n', 
+#      str(pear_five_test_ratio)+' :   1')
+#print('\nOls training churn ratios\n','churn : no churn\n', 
+#      str(ols_train_ratio)+' :   1')
+#print('\nOls test churn ratios\n','churn : no churn\n', 
+#      str(ols_test_ratio)+' :   1')
+#print('\nRfe training churn ratios\n','churn : no churn\n', 
+#      str(rfe_train_ratio)+' :   1')
+#print('\nRfe test churn ratios\n','churn : no churn\n', 
+#      str(rfe_test_ratio)+' :   1')
+#print('\nLasso training churn ratios\n','churn : no churn\n', 
+#      str(lasso_train_ratio)+' :   1')
+#print('\nLasso test churn ratios\n','churn : no churn\n', 
+#      str(lasso_test_ratio)+' :   1')
+#
+#########
+## End counts of the churn totals
+#########
 
 # Create list just for the algorithm durations
 algorithm_duration_list = []
@@ -940,643 +960,643 @@ algorithm_duration_list = []
 ################
 # start timing
 timings_list.append(['Non-scaled duration:', time.time()])
-timings_list.append(['Decision tree duration:', time.time()])
-
-#######
-# Start decision tree
-#######
-
-####
-# Start pearsons
-####
-
-# start time
-algorithm_duration_list.append(time.time()) 
-
-# Create a decisions tree classifier
-pearsons_tree_clf = tree.DecisionTreeClassifier(criterion = 'entropy')
-
-# Train the classifier on pearsons top 5 attributes
-pearsons_tree_clf = pearsons_tree_clf.fit(pearsons_df_train_x, 
-                                            pearsons_df_train_y)
-
-# Predict on pearsons top 5 attributes
-pearsons_tree_clf_prediction = pearsons_tree_clf.predict(pearsons_df_test_x)
-
-# end time
-algorithm_duration_list.append(time.time()) 
-
-####
-# End pearsons
-####
-
-####
-# Start ols_df
-####
-
-# start time
-algorithm_duration_list.append(time.time()) 
-
-# Create a decisions tree classifier
-ols_df_tree_clf = tree.DecisionTreeClassifier(criterion = 'entropy')
-
-# Train the classifier on ols attributes
-ols_df_tree_clf = ols_df_tree_clf.fit(ols_df_train_x, 
-                                      ols_df_train_y)
-
-# Predict on ols attributes
-ols_df_prediction = ols_df_tree_clf.predict(ols_df_test_x)
-
-# end time
-algorithm_duration_list.append(time.time()) 
-
-
-####
-# End ols_df
-####
-
-####
-# Start rfe_df
-####
-
-# start time
-algorithm_duration_list.append(time.time()) 
-
-# Create a decisions tree classifier
-rfe_df_tree_clf = tree.DecisionTreeClassifier(criterion = 'entropy')
-
-# Train the classifier on rfe attributes
-rfe_df_tree_clf = rfe_df_tree_clf.fit(rfe_df_train_x, 
-                                      rfe_df_train_y)
-
-# Predict on rfe attributes
-rfe_df_prediction = rfe_df_tree_clf.predict(rfe_df_test_x)
-
-# end time
-algorithm_duration_list.append(time.time()) 
-
-####
-# End rfe_df
-####
-
-####
-# Start lasso_df
-####
-
-# start time
-algorithm_duration_list.append(time.time()) 
-
-# Create a decisions tree classifier
-lasso_df_tree_clf = tree.DecisionTreeClassifier(criterion = 'entropy')
-
-# Train the classifier on lasso attributes
-lasso_df_tree_clf = lasso_df_tree_clf.fit(lasso_df_train_x, 
-                                          lasso_df_train_y)
-
-# Predict on lasso attributes
-lasso_df_prediction = lasso_df_tree_clf.predict(lasso_df_test_x)
-
-# end time
-algorithm_duration_list.append(time.time()) 
-
-####
-# End lasso_df
-####
-
-####
-# Start ten features
-####
-
-# Create a decisions tree classifier
-ten_df_tree_clf = tree.DecisionTreeClassifier(criterion = 'entropy')
-
-# Train the classifier on lasso attributes
-ten_df_tree_clf = ten_df_tree_clf.fit(ten_scaled_df_train_x, 
-                                          ten_scaled_df_train_y)
-
-# Predict on lasso attributes
-ten_df_prediction = ten_df_tree_clf.predict(ten_scaled_df_test_x)
-
-####
-# End ten features
-####
-
-####
-# Start twenty features
-####
-
-# Create a decisions tree classifier
-twenty_df_tree_clf = tree.DecisionTreeClassifier(criterion = 'entropy')
-
-# Train the classifier on lasso attributes
-twenty_df_tree_clf = twenty_df_tree_clf.fit(twenty_scaled_df_train_x, 
-                                            twenty_scaled_df_train_y)
-
-# Predict on lasso attributes
-twenty_df_prediction = twenty_df_tree_clf.predict(twenty_scaled_df_test_x)
-
-####
-# End twenty features
-####
-
-# Store predictions
-global_accuracy.append(100-(round(np.mean(pearsons_tree_clf_prediction 
-                                          != pearsons_df_test_y) * 100, 2)))
-global_accuracy.append(100-(round(np.mean(ols_df_prediction 
-                                          != ols_df_test_y) * 100, 2)))
-global_accuracy.append(100-(round(np.mean(rfe_df_prediction 
-                                          != rfe_df_test_y) * 100, 2)))
-global_accuracy.append(100-(round(np.mean(lasso_df_prediction 
-                                          != lasso_df_test_y) * 100, 2)))
-#######
-# End decision tree
-#######
-
-# end timing
-timings_list.append(['tree time end', time.time()])
-
-#######
-# Start naive bayes
-#######
-
-# start timing
-timings_list.append(['Naive Bayes duration:', time.time()])
-algorithm_duration_list.append(time.time()) 
-
-# Create a naive bayes classifier
-pearsons_gnb_clf = GaussianNB()
-
-# Train the classifier on pearsons top 5 attributes
-pearsons_gnb_clf = pearsons_gnb_clf.fit(pearsons_df_train_x, 
-                                          pearsons_df_train_y)
-
-# Predict on pearsons top 5 attributes
-pearsons_gnb_clf_prediction = pearsons_gnb_clf.predict(pearsons_df_test_x)
-
-# end time
-algorithm_duration_list.append(time.time()) 
-
-####
-# End five
-####
-
-####
-# Start ols_df
-####
-
-# start timing
-algorithm_duration_list.append(time.time())
-
-# Create a naive bayes classifier
-ols_df_gnb_clf = GaussianNB()
-
-# Train the classifier on ols attributes
-ols_df_gnb_clf = ols_df_gnb_clf.fit(ols_df_train_x, 
-                                    ols_df_train_y)
-
-# Predict on ols attributes
-ols_df_prediction = ols_df_gnb_clf.predict(ols_df_test_x)
-
-# end time
-algorithm_duration_list.append(time.time()) 
-
-####
-# End ols_df
-####
-
-####
-# Start rfe_df
-####
-
-# start timing
-algorithm_duration_list.append(time.time()) 
-
-# Create a naive bayes classifier
-rfe_df_gnb_clf = GaussianNB()
-
-# Train the classifier on rfe attributes
-rfe_df_gnb_clf = rfe_df_gnb_clf.fit(rfe_df_train_x, 
-                                    rfe_df_train_y)
-
-# Predict on rfe attributes
-rfe_df_prediction = rfe_df_gnb_clf.predict(rfe_df_test_x)
-
-# end time
-algorithm_duration_list.append(time.time()) 
-
-####
-# End rfe_df
-####
-
-####
-# Start lasso_df
-####
-
-# start timing
-algorithm_duration_list.append(time.time()) 
-
-# Create a naive bayes classifier
-lasso_df_gnb_clf = GaussianNB()
-
-# Train the classifier on lasso attributes
-lasso_df_gnb_clf = lasso_df_gnb_clf.fit(lasso_df_train_x, 
-                                        lasso_df_train_y)
-
-# Predict on lasso attributes
-lasso_df_prediction = lasso_df_gnb_clf.predict(lasso_df_test_x)
-
-# end time
-algorithm_duration_list.append(time.time()) 
-
-####
-# End lasso_df
-####
-
-####
-# Start ten features
-####
-
-# Create a decisions tree classifier
-ten_df_gnb_clf = GaussianNB()
-
-# Train the classifier on lasso attributes
-ten_df_gnb_clf = ten_df_gnb_clf.fit(ten_scaled_df_train_x, 
-                                    ten_scaled_df_train_y)
-
-# Predict on lasso attributes
-gnb_ten_df_prediction = ten_df_gnb_clf.predict(ten_scaled_df_test_x)
-
-####
-# End ten features
-####
-
-####
-# Start twenty features
-####
-
-# Create a decisions tree classifier
-twenty_df_gnb_clf = GaussianNB()
-
-# Train the classifier on lasso attributes
-twenty_df_gnb_clf = twenty_df_gnb_clf.fit(twenty_scaled_df_train_x, 
-                                            twenty_scaled_df_train_y)
-
-# Predict on lasso attributes
-gnb_twenty_df_prediction = twenty_df_gnb_clf.predict(twenty_scaled_df_test_x)
-
-####
-# End twenty features
-####
-
-# Store predictions
-global_accuracy.append(100-(round(np.mean(pearsons_gnb_clf_prediction 
-                                          != pearsons_df_test_y) * 100, 2)))
-global_accuracy.append(100-(round(np.mean(ols_df_prediction 
-                                          != ols_df_test_y) * 100, 2)))
-global_accuracy.append(100-(round(np.mean(rfe_df_prediction 
-                                          != rfe_df_test_y) * 100, 2)))
-global_accuracy.append(100-(round(np.mean(lasso_df_prediction 
-                                          != lasso_df_test_y) * 100, 2)))
-
-#######
-# End naive bayes
-#######
-
-# end timing
-timings_list.append(['naive time end', time.time()])
+#timings_list.append(['Decision tree duration:', time.time()])
+#
+########
+## Start decision tree
+########
+#
+#####
+## Start pearsons
+#####
+#
+## start time
+#algorithm_duration_list.append(time.time()) 
+#
+## Create a decisions tree classifier
+#pearsons_tree_clf = tree.DecisionTreeClassifier(criterion = 'entropy')
+#
+## Train the classifier on pearsons top 5 attributes
+#pearsons_tree_clf = pearsons_tree_clf.fit(pearsons_df_train_x, 
+#                                            pearsons_df_train_y)
+#
+## Predict on pearsons top 5 attributes
+#pearsons_tree_clf_prediction = pearsons_tree_clf.predict(pearsons_df_test_x)
+#
+## end time
+#algorithm_duration_list.append(time.time()) 
+#
+#####
+## End pearsons
+#####
+#
+#####
+## Start ols_df
+#####
+#
+## start time
+#algorithm_duration_list.append(time.time()) 
+#
+## Create a decisions tree classifier
+#ols_df_tree_clf = tree.DecisionTreeClassifier(criterion = 'entropy')
+#
+## Train the classifier on ols attributes
+#ols_df_tree_clf = ols_df_tree_clf.fit(ols_df_train_x, 
+#                                      ols_df_train_y)
+#
+## Predict on ols attributes
+#ols_df_prediction = ols_df_tree_clf.predict(ols_df_test_x)
+#
+## end time
+#algorithm_duration_list.append(time.time()) 
+#
+#
+#####
+## End ols_df
+#####
+#
+#####
+## Start rfe_df
+#####
+#
+## start time
+#algorithm_duration_list.append(time.time()) 
+#
+## Create a decisions tree classifier
+#rfe_df_tree_clf = tree.DecisionTreeClassifier(criterion = 'entropy')
+#
+## Train the classifier on rfe attributes
+#rfe_df_tree_clf = rfe_df_tree_clf.fit(rfe_df_train_x, 
+#                                      rfe_df_train_y)
+#
+## Predict on rfe attributes
+#rfe_df_prediction = rfe_df_tree_clf.predict(rfe_df_test_x)
+#
+## end time
+#algorithm_duration_list.append(time.time()) 
+#
+#####
+## End rfe_df
+#####
+#
+#####
+## Start lasso_df
+#####
+#
+## start time
+#algorithm_duration_list.append(time.time()) 
+#
+## Create a decisions tree classifier
+#lasso_df_tree_clf = tree.DecisionTreeClassifier(criterion = 'entropy')
+#
+## Train the classifier on lasso attributes
+#lasso_df_tree_clf = lasso_df_tree_clf.fit(lasso_df_train_x, 
+#                                          lasso_df_train_y)
+#
+## Predict on lasso attributes
+#lasso_df_prediction = lasso_df_tree_clf.predict(lasso_df_test_x)
+#
+## end time
+#algorithm_duration_list.append(time.time()) 
+#
+#####
+## End lasso_df
+#####
+#
+#####
+## Start ten features
+#####
+#
+## Create a decisions tree classifier
+#ten_df_tree_clf = tree.DecisionTreeClassifier(criterion = 'entropy')
+#
+## Train the classifier on lasso attributes
+#ten_df_tree_clf = ten_df_tree_clf.fit(ten_scaled_df_train_x, 
+#                                          ten_scaled_df_train_y)
+#
+## Predict on lasso attributes
+#ten_df_prediction = ten_df_tree_clf.predict(ten_scaled_df_test_x)
+#
+#####
+## End ten features
+#####
+#
+#####
+## Start twenty features
+#####
+#
+## Create a decisions tree classifier
+#twenty_df_tree_clf = tree.DecisionTreeClassifier(criterion = 'entropy')
+#
+## Train the classifier on lasso attributes
+#twenty_df_tree_clf = twenty_df_tree_clf.fit(twenty_scaled_df_train_x, 
+#                                            twenty_scaled_df_train_y)
+#
+## Predict on lasso attributes
+#twenty_df_prediction = twenty_df_tree_clf.predict(twenty_scaled_df_test_x)
+#
+#####
+## End twenty features
+#####
+#
+## Store predictions
+#global_accuracy.append(100-(round(np.mean(pearsons_tree_clf_prediction 
+#                                          != pearsons_df_test_y) * 100, 2)))
+#global_accuracy.append(100-(round(np.mean(ols_df_prediction 
+#                                          != ols_df_test_y) * 100, 2)))
+#global_accuracy.append(100-(round(np.mean(rfe_df_prediction 
+#                                          != rfe_df_test_y) * 100, 2)))
+#global_accuracy.append(100-(round(np.mean(lasso_df_prediction 
+#                                          != lasso_df_test_y) * 100, 2)))
+########
+## End decision tree
+########
+#
+## end timing
+#timings_list.append(['tree time end', time.time()])
+#
+########
+## Start naive bayes
+########
+#
+## start timing
+#timings_list.append(['Naive Bayes duration:', time.time()])
+#algorithm_duration_list.append(time.time()) 
+#
+## Create a naive bayes classifier
+#pearsons_gnb_clf = GaussianNB()
+#
+## Train the classifier on pearsons top 5 attributes
+#pearsons_gnb_clf = pearsons_gnb_clf.fit(pearsons_df_train_x, 
+#                                          pearsons_df_train_y)
+#
+## Predict on pearsons top 5 attributes
+#pearsons_gnb_clf_prediction = pearsons_gnb_clf.predict(pearsons_df_test_x)
+#
+## end time
+#algorithm_duration_list.append(time.time()) 
+#
+#####
+## End five
+#####
+#
+#####
+## Start ols_df
+#####
+#
+## start timing
+#algorithm_duration_list.append(time.time())
+#
+## Create a naive bayes classifier
+#ols_df_gnb_clf = GaussianNB()
+#
+## Train the classifier on ols attributes
+#ols_df_gnb_clf = ols_df_gnb_clf.fit(ols_df_train_x, 
+#                                    ols_df_train_y)
+#
+## Predict on ols attributes
+#ols_df_prediction = ols_df_gnb_clf.predict(ols_df_test_x)
+#
+## end time
+#algorithm_duration_list.append(time.time()) 
+#
+#####
+## End ols_df
+#####
+#
+#####
+## Start rfe_df
+#####
+#
+## start timing
+#algorithm_duration_list.append(time.time()) 
+#
+## Create a naive bayes classifier
+#rfe_df_gnb_clf = GaussianNB()
+#
+## Train the classifier on rfe attributes
+#rfe_df_gnb_clf = rfe_df_gnb_clf.fit(rfe_df_train_x, 
+#                                    rfe_df_train_y)
+#
+## Predict on rfe attributes
+#rfe_df_prediction = rfe_df_gnb_clf.predict(rfe_df_test_x)
+#
+## end time
+#algorithm_duration_list.append(time.time()) 
+#
+#####
+## End rfe_df
+#####
+#
+#####
+## Start lasso_df
+#####
+#
+## start timing
+#algorithm_duration_list.append(time.time()) 
+#
+## Create a naive bayes classifier
+#lasso_df_gnb_clf = GaussianNB()
+#
+## Train the classifier on lasso attributes
+#lasso_df_gnb_clf = lasso_df_gnb_clf.fit(lasso_df_train_x, 
+#                                        lasso_df_train_y)
+#
+## Predict on lasso attributes
+#lasso_df_prediction = lasso_df_gnb_clf.predict(lasso_df_test_x)
+#
+## end time
+#algorithm_duration_list.append(time.time()) 
+#
+#####
+## End lasso_df
+#####
+#
+#####
+## Start ten features
+#####
+#
+## Create a decisions tree classifier
+#ten_df_gnb_clf = GaussianNB()
+#
+## Train the classifier on lasso attributes
+#ten_df_gnb_clf = ten_df_gnb_clf.fit(ten_scaled_df_train_x, 
+#                                    ten_scaled_df_train_y)
+#
+## Predict on lasso attributes
+#gnb_ten_df_prediction = ten_df_gnb_clf.predict(ten_scaled_df_test_x)
+#
+#####
+## End ten features
+#####
+#
+#####
+## Start twenty features
+#####
+#
+## Create a decisions tree classifier
+#twenty_df_gnb_clf = GaussianNB()
+#
+## Train the classifier on lasso attributes
+#twenty_df_gnb_clf = twenty_df_gnb_clf.fit(twenty_scaled_df_train_x, 
+#                                            twenty_scaled_df_train_y)
+#
+## Predict on lasso attributes
+#gnb_twenty_df_prediction = twenty_df_gnb_clf.predict(twenty_scaled_df_test_x)
+#
+#####
+## End twenty features
+#####
+#
+## Store predictions
+#global_accuracy.append(100-(round(np.mean(pearsons_gnb_clf_prediction 
+#                                          != pearsons_df_test_y) * 100, 2)))
+#global_accuracy.append(100-(round(np.mean(ols_df_prediction 
+#                                          != ols_df_test_y) * 100, 2)))
+#global_accuracy.append(100-(round(np.mean(rfe_df_prediction 
+#                                          != rfe_df_test_y) * 100, 2)))
+#global_accuracy.append(100-(round(np.mean(lasso_df_prediction 
+#                                          != lasso_df_test_y) * 100, 2)))
+#
+########
+## End naive bayes
+########
+#
+## end timing
+#timings_list.append(['naive time end', time.time()])
 
 #######
 # Start Random Forest
 #######
 
-####
-# Start RF accuracy tests
-####
-
-# Random forest classifiers using a range from
-# 1 to 25 trees and from 1 to 10 depth of each tree
-# Set random state to 1337 for repeatability
-
-# Create a list to store the optimal tree and depth values 
-# for each random forest classifier
-trees_depth = []
-
-# create an empty list to store the rf accuracy at various settings
-rf_accuracy = []
-
-# setup an empty dataframe for the rf tests
-rf_accuracy_df = pd.DataFrame()
-
-####
-# Start pear five dataSet
-####
-
-pred_list = []
-
-# RF with iterator
-for trees in range(1, 26):
-    for depth in range(1, 11):
-        rf_clf_test = RandomForestClassifier(n_estimators = trees, 
-                                    max_depth = depth, criterion ='entropy',
-                                    random_state = 1337)
-        rf_clf_test.fit(pearsons_df_train_x, pearsons_df_train_y)
-        pred_list.append([trees, depth, 
-                    round(np.mean(rf_clf_test.predict(pearsons_df_test_x) 
-                    == pearsons_df_test_y) 
-                    * 100, 2), 'pearsons'])
-         
-#create a dataframe from the classifer data
-forest_df_1 = pd.DataFrame(pred_list, columns = ['Estimators', 'Depth',
-                                                 'Accuracy', 'Set'])
-
-# append forest 1 to full df
-rf_accuracy_df = rf_accuracy_df.append(forest_df_1)
-
-# store the lowest error rate value from the classifier
-ind = forest_df_1.loc[forest_df_1['Accuracy'] == 
-                      max(forest_df_1.Accuracy)].values
-
-# pull out the number of trees and depth
-trees_depth.append(int(ind.item(0)))
-trees_depth.append(int(ind.item(1)))
-
-# append the models accruacy to the accuracy list
-rf_accuracy.append(round(ind.item(2), 2))
-
-print('Pearsons:\nOptimal trees:', trees_depth[0],
-      '\nOptimal depth:', trees_depth[1])
-
-####
-# End pear five dataSet
-####
-
-####
-# Start ols dataSet
-####
-
-pred_list = []
-
-for trees in range(1, 26):
-    for depth in range(1, 11):
-        rf_clf_test = RandomForestClassifier(n_estimators = trees, 
-                                    max_depth = depth, criterion ='entropy',
-                                    random_state = 1337)
-        rf_clf_test.fit(ols_df_train_x, ols_df_train_y)
-        pred_list.append([trees, depth, 
-                    round(np.mean(rf_clf_test.predict(ols_df_test_x) 
-                    == ols_df_test_y) 
-                    * 100, 2), 'ols'])
-
-# create a dataframe from the classifer data
-forest_df_3 = pd.DataFrame(pred_list, columns = ['Estimators', 'Depth',
-                                                 'Accuracy', 'Set'])
-
-# append forest 3 to full df
-rf_accuracy_df = rf_accuracy_df.append(forest_df_3)
-
-# store the lowest error rate value from the classifier
-ind = forest_df_3.loc[forest_df_3['Accuracy'] == 
-                      max(forest_df_3.Accuracy)].values
-                      
-# pull out the number of trees and depth
-trees_depth.append(int(ind.item(0)))
-trees_depth.append(int(ind.item(1)))
-
-# append the models accruacy to the accuracy list
-rf_accuracy.append(round(ind.item(2), 2))
-
-print('OLS:\nOptimal trees:', trees_depth[2],
-      '\nOptimal depth:', trees_depth[3])
-
-
-####
-# End ols dataSet
-####
-
-####
-# Start rfe dataSet
-####
-
-pred_list = []
-
-for trees in range(1, 26):
-    for depth in range(1, 11):
-        rf_clf_test = RandomForestClassifier(n_estimators = trees, 
-                                    max_depth = depth, criterion ='entropy',
-                                    random_state = 1337)
-        rf_clf_test.fit(rfe_df_train_x, rfe_df_train_y)
-        pred_list.append([trees, depth, 
-                    round(np.mean(rf_clf_test.predict(rfe_df_test_x) 
-                    == rfe_df_test_y) 
-                    * 100, 2), 'rfe'])
-
-# create a dataframe from the classifer data
-forest_df_4 = pd.DataFrame(pred_list, columns = ['Estimators', 'Depth',
-                                                 'Accuracy', 'Set'])
-
-# append forest 4 to full df
-rf_accuracy_df = rf_accuracy_df.append(forest_df_4)
-
-# store the lowest error rate value from the classifier
-ind = forest_df_4.loc[forest_df_4['Accuracy'] == 
-                      max(forest_df_4.Accuracy)].values
-                      
-# pull out the number of trees and depth
-trees_depth.append(int(ind.item(0)))
-trees_depth.append(int(ind.item(1)))
-
-# append the models accruacy to the accuracy list
-rf_accuracy.append(round(ind.item(2), 2))
-
-print('RFE:\nOptimal trees:', trees_depth[4],
-      '\nOptimal depth:', trees_depth[5])
-
-####
-# End rfe dataSet
-####
-
-####
-# Start lasso dataSet
-####
-
-pred_list = []
-
-for trees in range(1, 26):
-    for depth in range(1, 11):
-        rf_clf_test = RandomForestClassifier(n_estimators = trees, 
-                                    max_depth = depth, criterion ='entropy',
-                                    random_state = 1337)
-        rf_clf_test.fit(lasso_df_train_x, lasso_df_train_y)
-        pred_list.append([trees, depth, 
-                    round(np.mean(rf_clf_test.predict(lasso_df_test_x) 
-                    == lasso_df_test_y) 
-                    * 100, 2), 'lasso'])
-
-# create a dataframe from the classifer data
-forest_df_5 = pd.DataFrame(pred_list, columns = ['Estimators', 'Depth',
-                                                 'Accuracy', 'Set'])
-
-# append forest 5 to full df
-rf_accuracy_df = rf_accuracy_df.append(forest_df_5)
-
-# store the lowest error rate value from the classifier
-ind = forest_df_5.loc[forest_df_5['Accuracy'] == 
-                      max(forest_df_5.Accuracy)].values
-                      
-# pull out the number of trees and depth
-trees_depth.append(int(ind.item(0)))
-trees_depth.append(int(ind.item(1)))
-
-# append the models accruacy to the accuracy list
-rf_accuracy.append(round(ind.item(2), 2))
-
-print('Lasso:\nOptimal trees:', trees_depth[6],
-      '\nOptimal depth:', trees_depth[7])
-
-####
-# End lasso dataSet
-####
-
-####
-# Start full dataSet
-####
-
-pred_list = []
-
-for trees in range(1, 26):
-    for depth in range(1, 11):
-        rf_clf_test = RandomForestClassifier(n_estimators = trees, 
-                                    max_depth = depth, criterion ='entropy',
-                                    random_state = 1337)
-        rf_clf_test.fit(full_df_train_x, full_df_train_y)
-        pred_list.append([trees, depth, 
-                    round(np.mean(rf_clf_test.predict(full_df_test_x) 
-                    == full_df_test_y) 
-                    * 100, 2), 'full'])
-
-# create a dataframe from the classifer data
-forest_df_6 = pd.DataFrame(pred_list, columns = ['Estimators', 'Depth',
-                                                 'Accuracy', 'Set'])
-
-# append forest 6 to full df
-rf_accuracy_df = rf_accuracy_df.append(forest_df_6)
-    
-# store the lowest error rate value from the classifier
-ind = forest_df_6.loc[forest_df_6['Accuracy'] == 
-                      max(forest_df_6.Accuracy)].values
-                      
-# pull out the number of trees and depth
-trees_depth.append(int(ind.item(0)))
-trees_depth.append(int(ind.item(1)))
-
-# append the models accruacy to the accuracy list
-rf_accuracy.append(round(ind.item(2), 2))
-
-print('Full:\nOptimal trees:', trees_depth[8],
-      '\nOptimal depth:', trees_depth[9])
-
-####
-# End full dataSet
-####
-
-####
-# Start ten features
-####
-
-pred_list = []
-
-for trees in range(1, 26):
-    for depth in range(1, 11):
-        rf_clf_test = RandomForestClassifier(n_estimators = trees, 
-                                    max_depth = depth, criterion ='entropy',
-                                    random_state = 1337)
-        rf_clf_test.fit(ten_scaled_df_train_x, ten_scaled_df_train_y)
-        pred_list.append([trees, depth, 
-                    round(np.mean(rf_clf_test.predict(ten_scaled_df_test_x) 
-                    == full_df_test_y) 
-                    * 100, 2), 'ten'])
-
-# create a dataframe from the classifer data
-forest_df_7 = pd.DataFrame(pred_list, columns = ['Estimators', 'Depth',
-                                                 'Accuracy', 'Set'])
-
-# append forest 6 to full df
-rf_accuracy_df = rf_accuracy_df.append(forest_df_7)
-    
-# store the lowest error rate value from the classifier
-ind = forest_df_7.loc[forest_df_7['Accuracy'] == 
-                      max(forest_df_7.Accuracy)].values
-                      
-# pull out the number of trees and depth
-trees_depth.append(int(ind.item(0)))
-trees_depth.append(int(ind.item(1)))
-
-# append the models accruacy to the accuracy list
-rf_accuracy.append(round(ind.item(2), 2))
-
-print('Ten:\nOptimal trees:', trees_depth[10],
-      '\nOptimal depth:', trees_depth[11])
-
-####
-# End ten features
-####
-
-####
-# Start twenty features
-####
-
-pred_list = []
-
-for trees in range(1, 26):
-    for depth in range(1, 11):
-        rf_clf_test = RandomForestClassifier(n_estimators = trees, 
-                                    max_depth = depth, criterion ='entropy',
-                                    random_state = 1337)
-        rf_clf_test.fit(twenty_scaled_df_train_x, twenty_scaled_df_train_y)
-        pred_list.append([trees, depth, 
-                    round(np.mean(rf_clf_test.predict(twenty_scaled_df_test_x) 
-                    == full_df_test_y) 
-                    * 100, 2), 'twenty'])
-
-# create a dataframe from the classifer data
-forest_df_8 = pd.DataFrame(pred_list, columns = ['Estimators', 'Depth',
-                                                 'Accuracy', 'Set'])
-
-# append forest 6 to full df
-rf_accuracy_df = rf_accuracy_df.append(forest_df_8)
-    
-# store the lowest error rate value from the classifier
-ind = forest_df_8.loc[forest_df_8['Accuracy'] == 
-                      max(forest_df_8.Accuracy)].values
-                      
-# pull out the number of trees and depth
-trees_depth.append(int(ind.item(0)))
-trees_depth.append(int(ind.item(1)))
-
-# append the models accruacy to the accuracy list
-rf_accuracy.append(round(ind.item(2), 2))
-
-print('Twenty:\nOptimal trees:', trees_depth[12],
-      '\nOptimal depth:', trees_depth[13])
-
-####
-# End twenty features
-####
-
-# Create palette
-palette = dict(zip(rf_accuracy_df.Depth.unique(),
-                   sns.color_palette("tab10", 10)))
-
-# Plot
-sns.relplot(x="Estimators", y="Accuracy",
-            hue="Depth", col="Set",
-            palette=palette, col_wrap=3,
-            height=3, aspect=1, facet_kws=dict(sharex=False),
-            kind="line", legend="full", data=rf_accuracy_df)
-
-####
-# End RF accuracy tests
-####
+#####
+## Start RF accuracy tests
+#####
+#
+## Random forest classifiers using a range from
+## 1 to 25 trees and from 1 to 10 depth of each tree
+## Set random state to 1337 for repeatability
+#
+## Create a list to store the optimal tree and depth values 
+## for each random forest classifier
+#trees_depth = []
+#
+## create an empty list to store the rf accuracy at various settings
+#rf_accuracy = []
+#
+## setup an empty dataframe for the rf tests
+#rf_accuracy_df = pd.DataFrame()
+#
+#####
+## Start pear five dataSet
+#####
+#
+#pred_list = []
+#
+## RF with iterator
+#for trees in range(1, 26):
+#    for depth in range(1, 11):
+#        rf_clf_test = RandomForestClassifier(n_estimators = trees, 
+#                                    max_depth = depth, criterion ='entropy',
+#                                    random_state = 1337)
+#        rf_clf_test.fit(pearsons_df_train_x, pearsons_df_train_y)
+#        pred_list.append([trees, depth, 
+#                    round(np.mean(rf_clf_test.predict(pearsons_df_test_x) 
+#                    == pearsons_df_test_y) 
+#                    * 100, 2), 'pearsons'])
+#         
+##create a dataframe from the classifer data
+#forest_df_1 = pd.DataFrame(pred_list, columns = ['Estimators', 'Depth',
+#                                                 'Accuracy', 'Set'])
+#
+## append forest 1 to full df
+#rf_accuracy_df = rf_accuracy_df.append(forest_df_1)
+#
+## store the lowest error rate value from the classifier
+#ind = forest_df_1.loc[forest_df_1['Accuracy'] == 
+#                      max(forest_df_1.Accuracy)].values
+#
+## pull out the number of trees and depth
+#trees_depth.append(int(ind.item(0)))
+#trees_depth.append(int(ind.item(1)))
+#
+## append the models accruacy to the accuracy list
+#rf_accuracy.append(round(ind.item(2), 2))
+#
+#print('Pearsons:\nOptimal trees:', trees_depth[0],
+#      '\nOptimal depth:', trees_depth[1])
+#
+#####
+## End pear five dataSet
+#####
+#
+#####
+## Start ols dataSet
+#####
+#
+#pred_list = []
+#
+#for trees in range(1, 26):
+#    for depth in range(1, 11):
+#        rf_clf_test = RandomForestClassifier(n_estimators = trees, 
+#                                    max_depth = depth, criterion ='entropy',
+#                                    random_state = 1337)
+#        rf_clf_test.fit(ols_df_train_x, ols_df_train_y)
+#        pred_list.append([trees, depth, 
+#                    round(np.mean(rf_clf_test.predict(ols_df_test_x) 
+#                    == ols_df_test_y) 
+#                    * 100, 2), 'ols'])
+#
+## create a dataframe from the classifer data
+#forest_df_3 = pd.DataFrame(pred_list, columns = ['Estimators', 'Depth',
+#                                                 'Accuracy', 'Set'])
+#
+## append forest 3 to full df
+#rf_accuracy_df = rf_accuracy_df.append(forest_df_3)
+#
+## store the lowest error rate value from the classifier
+#ind = forest_df_3.loc[forest_df_3['Accuracy'] == 
+#                      max(forest_df_3.Accuracy)].values
+#                      
+## pull out the number of trees and depth
+#trees_depth.append(int(ind.item(0)))
+#trees_depth.append(int(ind.item(1)))
+#
+## append the models accruacy to the accuracy list
+#rf_accuracy.append(round(ind.item(2), 2))
+#
+#print('OLS:\nOptimal trees:', trees_depth[2],
+#      '\nOptimal depth:', trees_depth[3])
+#
+#
+#####
+## End ols dataSet
+#####
+#
+#####
+## Start rfe dataSet
+#####
+#
+#pred_list = []
+#
+#for trees in range(1, 26):
+#    for depth in range(1, 11):
+#        rf_clf_test = RandomForestClassifier(n_estimators = trees, 
+#                                    max_depth = depth, criterion ='entropy',
+#                                    random_state = 1337)
+#        rf_clf_test.fit(rfe_df_train_x, rfe_df_train_y)
+#        pred_list.append([trees, depth, 
+#                    round(np.mean(rf_clf_test.predict(rfe_df_test_x) 
+#                    == rfe_df_test_y) 
+#                    * 100, 2), 'rfe'])
+#
+## create a dataframe from the classifer data
+#forest_df_4 = pd.DataFrame(pred_list, columns = ['Estimators', 'Depth',
+#                                                 'Accuracy', 'Set'])
+#
+## append forest 4 to full df
+#rf_accuracy_df = rf_accuracy_df.append(forest_df_4)
+#
+## store the lowest error rate value from the classifier
+#ind = forest_df_4.loc[forest_df_4['Accuracy'] == 
+#                      max(forest_df_4.Accuracy)].values
+#                      
+## pull out the number of trees and depth
+#trees_depth.append(int(ind.item(0)))
+#trees_depth.append(int(ind.item(1)))
+#
+## append the models accruacy to the accuracy list
+#rf_accuracy.append(round(ind.item(2), 2))
+#
+#print('RFE:\nOptimal trees:', trees_depth[4],
+#      '\nOptimal depth:', trees_depth[5])
+#
+#####
+## End rfe dataSet
+#####
+#
+#####
+## Start lasso dataSet
+#####
+#
+#pred_list = []
+#
+#for trees in range(1, 26):
+#    for depth in range(1, 11):
+#        rf_clf_test = RandomForestClassifier(n_estimators = trees, 
+#                                    max_depth = depth, criterion ='entropy',
+#                                    random_state = 1337)
+#        rf_clf_test.fit(lasso_df_train_x, lasso_df_train_y)
+#        pred_list.append([trees, depth, 
+#                    round(np.mean(rf_clf_test.predict(lasso_df_test_x) 
+#                    == lasso_df_test_y) 
+#                    * 100, 2), 'lasso'])
+#
+## create a dataframe from the classifer data
+#forest_df_5 = pd.DataFrame(pred_list, columns = ['Estimators', 'Depth',
+#                                                 'Accuracy', 'Set'])
+#
+## append forest 5 to full df
+#rf_accuracy_df = rf_accuracy_df.append(forest_df_5)
+#
+## store the lowest error rate value from the classifier
+#ind = forest_df_5.loc[forest_df_5['Accuracy'] == 
+#                      max(forest_df_5.Accuracy)].values
+#                      
+## pull out the number of trees and depth
+#trees_depth.append(int(ind.item(0)))
+#trees_depth.append(int(ind.item(1)))
+#
+## append the models accruacy to the accuracy list
+#rf_accuracy.append(round(ind.item(2), 2))
+#
+#print('Lasso:\nOptimal trees:', trees_depth[6],
+#      '\nOptimal depth:', trees_depth[7])
+#
+#####
+## End lasso dataSet
+#####
+#
+#####
+## Start full dataSet
+#####
+#
+#pred_list = []
+#
+#for trees in range(1, 26):
+#    for depth in range(1, 11):
+#        rf_clf_test = RandomForestClassifier(n_estimators = trees, 
+#                                    max_depth = depth, criterion ='entropy',
+#                                    random_state = 1337)
+#        rf_clf_test.fit(full_df_train_x, full_df_train_y)
+#        pred_list.append([trees, depth, 
+#                    round(np.mean(rf_clf_test.predict(full_df_test_x) 
+#                    == full_df_test_y) 
+#                    * 100, 2), 'full'])
+#
+## create a dataframe from the classifer data
+#forest_df_6 = pd.DataFrame(pred_list, columns = ['Estimators', 'Depth',
+#                                                 'Accuracy', 'Set'])
+#
+## append forest 6 to full df
+#rf_accuracy_df = rf_accuracy_df.append(forest_df_6)
+#    
+## store the lowest error rate value from the classifier
+#ind = forest_df_6.loc[forest_df_6['Accuracy'] == 
+#                      max(forest_df_6.Accuracy)].values
+#                      
+## pull out the number of trees and depth
+#trees_depth.append(int(ind.item(0)))
+#trees_depth.append(int(ind.item(1)))
+#
+## append the models accruacy to the accuracy list
+#rf_accuracy.append(round(ind.item(2), 2))
+#
+#print('Full:\nOptimal trees:', trees_depth[8],
+#      '\nOptimal depth:', trees_depth[9])
+#
+#####
+## End full dataSet
+#####
+#
+#####
+## Start ten features
+#####
+#
+#pred_list = []
+#
+#for trees in range(1, 26):
+#    for depth in range(1, 11):
+#        rf_clf_test = RandomForestClassifier(n_estimators = trees, 
+#                                    max_depth = depth, criterion ='entropy',
+#                                    random_state = 1337)
+#        rf_clf_test.fit(ten_scaled_df_train_x, ten_scaled_df_train_y)
+#        pred_list.append([trees, depth, 
+#                    round(np.mean(rf_clf_test.predict(ten_scaled_df_test_x) 
+#                    == full_df_test_y) 
+#                    * 100, 2), 'ten'])
+#
+## create a dataframe from the classifer data
+#forest_df_7 = pd.DataFrame(pred_list, columns = ['Estimators', 'Depth',
+#                                                 'Accuracy', 'Set'])
+#
+## append forest 6 to full df
+#rf_accuracy_df = rf_accuracy_df.append(forest_df_7)
+#    
+## store the lowest error rate value from the classifier
+#ind = forest_df_7.loc[forest_df_7['Accuracy'] == 
+#                      max(forest_df_7.Accuracy)].values
+#                      
+## pull out the number of trees and depth
+#trees_depth.append(int(ind.item(0)))
+#trees_depth.append(int(ind.item(1)))
+#
+## append the models accruacy to the accuracy list
+#rf_accuracy.append(round(ind.item(2), 2))
+#
+#print('Ten:\nOptimal trees:', trees_depth[10],
+#      '\nOptimal depth:', trees_depth[11])
+#
+#####
+## End ten features
+#####
+#
+#####
+## Start twenty features
+#####
+#
+#pred_list = []
+#
+#for trees in range(1, 26):
+#    for depth in range(1, 11):
+#        rf_clf_test = RandomForestClassifier(n_estimators = trees, 
+#                                    max_depth = depth, criterion ='entropy',
+#                                    random_state = 1337)
+#        rf_clf_test.fit(twenty_scaled_df_train_x, twenty_scaled_df_train_y)
+#        pred_list.append([trees, depth, 
+#                    round(np.mean(rf_clf_test.predict(twenty_scaled_df_test_x) 
+#                    == full_df_test_y) 
+#                    * 100, 2), 'twenty'])
+#
+## create a dataframe from the classifer data
+#forest_df_8 = pd.DataFrame(pred_list, columns = ['Estimators', 'Depth',
+#                                                 'Accuracy', 'Set'])
+#
+## append forest 6 to full df
+#rf_accuracy_df = rf_accuracy_df.append(forest_df_8)
+#    
+## store the lowest error rate value from the classifier
+#ind = forest_df_8.loc[forest_df_8['Accuracy'] == 
+#                      max(forest_df_8.Accuracy)].values
+#                      
+## pull out the number of trees and depth
+#trees_depth.append(int(ind.item(0)))
+#trees_depth.append(int(ind.item(1)))
+#
+## append the models accruacy to the accuracy list
+#rf_accuracy.append(round(ind.item(2), 2))
+#
+#print('Twenty:\nOptimal trees:', trees_depth[12],
+#      '\nOptimal depth:', trees_depth[13])
+#
+#####
+## End twenty features
+#####
+#
+## Create palette
+#palette = dict(zip(rf_accuracy_df.Depth.unique(),
+#                   sns.color_palette("tab10", 10)))
+#
+## Plot
+#sns.relplot(x="Estimators", y="Accuracy",
+#            hue="Depth", col="Set",
+#            palette=palette, col_wrap=3,
+#            height=3, aspect=1, facet_kws=dict(sharex=False),
+#            kind="line", legend="full", data=rf_accuracy_df)
+#
+#####
+## End RF accuracy tests
+#####
 
 ####
 # Start fixed value RFs
@@ -1619,7 +1639,17 @@ global_accuracy.append(100-(round(np.mean(rf_pearsons_pred
 
 # end time
 algorithm_duration_list.append(time.time())
- 
+
+# store true vs predicted value
+rf_pearsons_df = pd.DataFrame({'trueValue': pearsons_df_test_y, \
+                                   'predictedValue': rf_pearsons_pred})
+# calculate the roc auc score
+roc_scores.update({'RF-Pearsons': roc_auc_score(rf_pearsons_df.trueValue, \
+                                                rf_pearsons_df.predictedValue)})
+    
+#roc_scores.append(roc_auc_score(rf_pearsons_df.trueValue, \
+#                                rf_pearsons_df.predictedValue))
+
 ####
 # End pearsons dataset
 ####
@@ -1643,6 +1673,16 @@ rf_ols_pred = rf_clf.predict(ols_df_test_x)
 # store accuracy
 global_accuracy.append(100-(round(np.mean(rf_ols_pred != ols_df_test_y),2)))
                                   
+# store true vs predicted value
+rf_ols_df = pd.DataFrame({'trueValue': ols_df_test_y, \
+                          'predictedValue': rf_ols_pred})
+
+# calculate the roc auc score
+roc_scores.update({'RF-ols': roc_auc_score(rf_ols_df.trueValue, \
+                                           rf_ols_df.predictedValue)})
+
+#roc_scores.append(roc_auc_score(rf_ols_df.trueValue, \
+#                                rf_ols_df.predictedValue))
 
 # end time
 algorithm_duration_list.append(time.time())
@@ -1669,7 +1709,16 @@ rf_rfe_pred = rf_clf.predict(rfe_df_test_x)
 
 # store accuracy
 global_accuracy.append(100-(round(np.mean(rf_rfe_pred != rfe_df_test_y),2)))
-                                  
+
+# store true vs predicted value
+rf_rfe_df = pd.DataFrame({'trueValue': rfe_df_test_y, \
+                          'predictedValue': rf_rfe_pred})
+# calculate the roc auc score
+roc_scores.update({'RF-rfe': roc_auc_score(rf_rfe_df.trueValue, \
+                                           rf_rfe_df.predictedValue)})
+#roc_scores.append(roc_auc_score(rf_rfe_df.trueValue, \
+#                                rf_rfe_df.predictedValue))
+
 # end time
 algorithm_duration_list.append(time.time())
 
@@ -1698,6 +1747,16 @@ rf_lasso_pred = rf_clf.predict(lasso_df_test_x)
 global_accuracy.append(100-(round(np.mean(rf_lasso_pred
                                   != lasso_df_test_y),2)))
 
+# store true vs predicted value
+rf_lasso_df = pd.DataFrame({'trueValue': lasso_df_test_y, \
+                          'predictedValue': rf_lasso_pred})
+# calculate the roc auc score
+roc_scores.update({'RF-lasso': roc_auc_score(rf_lasso_df.trueValue, \
+                                             rf_lasso_df.predictedValue)})
+
+#roc_scores.append(roc_auc_score(rf_lasso_df.trueValue, \
+#                                rf_lasso_df.predictedValue))
+
 # end time
 algorithm_duration_list.append(time.time())
 
@@ -1724,6 +1783,16 @@ rf_full_pred = rf_clf.predict(full_df_test_x)
 # store accuracy
 global_accuracy.append(100-(round(np.mean(rf_full_pred != full_df_test_y),2)))                  
 
+# store true vs predicted value
+rf_full_df = pd.DataFrame({'trueValue': full_df_test_y, \
+                          'predictedValue': rf_full_pred})
+# calculate the roc auc score
+roc_scores.update({'RF-full': roc_auc_score(rf_full_df.trueValue, \
+                                           rf_full_df.predictedValue)})  
+#roc_scores.append(roc_auc_score(rf_full_df.trueValue, \
+#                                rf_full_df.predictedValue))
+
+
 # end time
 algorithm_duration_list.append(time.time())
 
@@ -1748,7 +1817,18 @@ rf_clf.fit(ten_scaled_df_train_x, ten_scaled_df_train_y)
 rf_ten_pred = rf_clf.predict(ten_scaled_df_test_x)
 
 # store accuracy
-global_accuracy.append(100-(round(np.mean(rf_ten_pred != ten_scaled_df_test_y),2)))                  
+global_accuracy.append(100-(round(np.mean(rf_ten_pred != \
+                                          ten_scaled_df_test_y),2)))                  
+
+# store true vs predicted value
+rf_ten_df = pd.DataFrame({'trueValue': ten_scaled_df_test_y, \
+                          'predictedValue': rf_ten_pred})
+# calculate the roc auc score
+roc_scores.update({'RF-ten': roc_auc_score(rf_ten_df.trueValue, \
+                                           rf_ten_df.predictedValue)})
+
+#roc_scores.append(roc_auc_score(rf_ten_df.trueValue, \
+#                                rf_ten_df.predictedValue))
 
 # end time
 algorithm_duration_list.append(time.time())
@@ -1776,6 +1856,16 @@ rf_twenty_pred = rf_clf.predict(twenty_scaled_df_test_x)
 
 # store accuracy
 global_accuracy.append(100-(round(np.mean(rf_twenty_pred != twenty_scaled_df_test_y),2)))                  
+
+# store true vs predicted value
+rf_twenty_df = pd.DataFrame({'trueValue': twenty_scaled_df_test_y, \
+                          'predictedValue': rf_twenty_pred})
+# calculate the roc auc score
+roc_scores.update({'RF-twenty': roc_auc_score(rf_twenty_df.trueValue, \
+                                              rf_twenty_df.predictedValue)})
+    
+#roc_scores.append(roc_auc_score(rf_twenty_df.trueValue, \
+#                                rf_twenty_df.predictedValue))
 
 # end time
 algorithm_duration_list.append(time.time())
@@ -2259,6 +2349,16 @@ knn_pearsons_pred = knn_classifier.predict(pearsons_scaled_df_test_x)
 global_accuracy.append(100-(round(np.mean(knn_pearsons_pred
                                           != pearsons_scaled_df_test_y),2)))
 
+# store true vs predicted value
+knn_pearsons_df = pd.DataFrame({'trueValue': pearsons_scaled_df_test_y, \
+                          'predictedValue': knn_pearsons_pred})
+# calculate the roc auc score
+roc_scores.update({'KNN-pearsons': roc_auc_score(knn_pearsons_df.trueValue, \
+                                           knn_pearsons_df.predictedValue)})
+    
+#roc_scores.append(roc_auc_score(knn_pearsons_df.trueValue, \
+#                                knn_pearsons_df.predictedValue))
+
 # end time
 algorithm_duration_list.append(time.time())
 
@@ -2286,6 +2386,16 @@ knn_ols_pred = knn_classifier.predict(ols_scaled_df_test_x)
 # store accuracy
 global_accuracy.append(100-(round(np.mean(knn_ols_pred
                                           != ols_scaled_df_test_y),2)))
+
+# store true vs predicted value
+knn_ols_df = pd.DataFrame({'trueValue': ols_scaled_df_test_y, \
+                          'predictedValue': knn_ols_pred})
+# calculate the roc auc score
+roc_scores.update({'KNN-ols': roc_auc_score(knn_ols_df.trueValue, \
+                                           knn_ols_df.predictedValue)})
+    
+#roc_scores.append(roc_auc_score(knn_ols_df.trueValue, \
+#                                knn_ols_df.predictedValue))
 
 # end time
 algorithm_duration_list.append(time.time()) 
@@ -2315,6 +2425,16 @@ knn_rfe_pred = knn_classifier.predict(rfe_scaled_df_test_x)
 global_accuracy.append(100-(round(np.mean(knn_rfe_pred
                                           != rfe_scaled_df_test_y),2)))
 
+# store true vs predicted value
+knn_rfe_df = pd.DataFrame({'trueValue': rfe_scaled_df_test_y, \
+                          'predictedValue': knn_rfe_pred})
+# calculate the roc auc score
+roc_scores.update({'KNN-rfe': roc_auc_score(knn_rfe_df.trueValue, \
+                                           knn_rfe_df.predictedValue)})
+    
+#roc_scores.append(roc_auc_score(knn_rfe_df.trueValue, \
+#                                knn_rfe_df.predictedValue))
+
 # end time
 algorithm_duration_list.append(time.time()) 
 
@@ -2343,6 +2463,16 @@ knn_lasso_pred = knn_classifier.predict(lasso_scaled_df_test_x)
 global_accuracy.append(100-(round(np.mean(knn_lasso_pred
                                           != lasso_scaled_df_test_y),2)))
 
+# store true vs predicted value
+knn_lasso_df = pd.DataFrame({'trueValue': lasso_scaled_df_test_y, \
+                          'predictedValue': knn_lasso_pred})
+# calculate the roc auc score
+roc_scores.update({'KNN-lasso': roc_auc_score(knn_lasso_df.trueValue, \
+                                           knn_lasso_df.predictedValue)})
+    
+#roc_scores.append(roc_auc_score(knn_lasso_df.trueValue, \
+#                                knn_lasso_df.predictedValue))
+
 # end time
 algorithm_duration_list.append(time.time()) 
 
@@ -2355,7 +2485,7 @@ algorithm_duration_list.append(time.time())
 ####
 
 # start time
-#algorithm_duration_list.append(time.time())
+algorithm_duration_list.append(time.time())
 
 # initalize knn
 knn_classifier = KNeighborsClassifier(n_neighbors = 47)
@@ -2371,8 +2501,18 @@ knn_ten_pred = knn_classifier.predict(ten_scaled_df_test_x)
 global_accuracy.append(100-(round(np.mean(knn_ten_pred
                                           != ten_scaled_df_test_y),2)))
 
+# store true vs predicted value
+knn_ten_df = pd.DataFrame({'trueValue': ten_scaled_df_test_y, \
+                          'predictedValue': knn_ten_pred})
+# calculate the roc auc score
+roc_scores.update({'KNN-ten': roc_auc_score(knn_ten_df.trueValue, \
+                                           knn_ten_df.predictedValue)})
+
+#roc_scores.append(roc_auc_score(knn_ten_df.trueValue, \
+#                                knn_ten_df.predictedValue))
+
 # end time
-#algorithm_duration_list.append(time.time()) 
+algorithm_duration_list.append(time.time()) 
 
 ####
 # end ten dataset
@@ -2383,7 +2523,7 @@ global_accuracy.append(100-(round(np.mean(knn_ten_pred
 ####
 
 # start time
-#algorithm_duration_list.append(time.time())
+algorithm_duration_list.append(time.time())
 
 # initalize knn
 knn_classifier = KNeighborsClassifier(n_neighbors = 61)
@@ -2399,8 +2539,18 @@ knn_twenty_pred = knn_classifier.predict(twenty_scaled_df_test_x)
 global_accuracy.append(100-(round(np.mean(knn_twenty_pred
                                           != twenty_scaled_df_test_y),2)))
 
+# store true vs predicted value
+knn_twenty_df = pd.DataFrame({'trueValue': twenty_scaled_df_test_y, \
+                          'predictedValue': knn_twenty_pred})
+# calculate the roc auc score
+roc_scores.update({'KNN-twenty': roc_auc_score(knn_twenty_df.trueValue, \
+                                           knn_twenty_df.predictedValue)})
+    
+#roc_scores.append(roc_auc_score(knn_twenty_df.trueValue, \
+#                                knn_twenty_df.predictedValue))
+
 # end time
-#algorithm_duration_list.append(time.time()) 
+algorithm_duration_list.append(time.time()) 
 
 ####
 # end twenty dataset
@@ -2413,1144 +2563,960 @@ global_accuracy.append(100-(round(np.mean(knn_twenty_pred
 # end timing
 timings_list.append(['knn time end', time.time()])
 
-#######
-# Start linear SVM
-#######
-
-# start timing
-timings_list.append(['SVM linear duration:', time.time()])
-
-####
-# Start pear five dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-# create a linear SVM classifier
-svm_classifier_linear = svm.SVC(kernel = 'linear')
-
-# fit the classifier on training data
-svm_classifier_linear.fit(pearsons_scaled_df_train_x, 
-                          pearsons_scaled_df_train_y)
-
-# Predict using 2018 feature data
-prediction_linear = svm_classifier_linear.predict(pearsons_scaled_df_test_x)
-
-# calculate error rate
-global_accuracy.append(100-(round(np.mean(prediction_linear != 
-                                   pearsons_scaled_df_test_y) * 100, 2)))
-
-# end time
-algorithm_duration_list.append(time.time()) 
-
-####
-# End pear five dataset
-####
-
-####
-# Start ols ten dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-# create a linear SVM classifier
-svm_classifier_linear = svm.SVC(kernel = 'linear')
-
-# fit the classifier on training data
-svm_classifier_linear.fit(ols_scaled_df_train_x, 
-                          ols_scaled_df_train_y)
-
-# Predict using 2018 feature data
-prediction_linear = svm_classifier_linear.predict(ols_scaled_df_test_x)
-
-# calculate error rate
-global_accuracy.append(100-(round(np.mean(prediction_linear != 
-                                         ols_scaled_df_test_y) * 100, 2)))
-
-# end time
-algorithm_duration_list.append(time.time())
-
-####
-# End ols ten dataset
-####
-
-####
-# Start rfe ten dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-# create a linear SVM classifier
-svm_classifier_linear = svm.SVC(kernel = 'linear')
-
-# fit the classifier on training data
-svm_classifier_linear.fit(rfe_scaled_df_train_x, 
-                          rfe_scaled_df_train_y)
-
-# Predict using 2018 feature data
-prediction_linear = svm_classifier_linear.predict(rfe_scaled_df_test_x)
-
-# calculate error rate
-global_accuracy.append(100-(round(np.mean(prediction_linear != 
-                                         rfe_scaled_df_test_y) * 100, 2)))
-
-# end time
-algorithm_duration_list.append(time.time())
-
-####
-# End rfe ten dataset
-####
-
-####
-# Start lasso ten dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-# create a linear SVM classifier
-svm_classifier_linear = svm.SVC(kernel = 'linear')
-
-# fit the classifier on training data
-svm_classifier_linear.fit(lasso_scaled_df_train_x, 
-                          lasso_scaled_df_train_y)
-
-# Predict using 2018 feature data
-prediction_linear = svm_classifier_linear.predict(lasso_scaled_df_test_x)
-
-# calculate error rate
-global_accuracy.append(100-(round(np.mean(prediction_linear != 
-                                         lasso_scaled_df_test_y) * 100, 2)))
-
-# end time
-algorithm_duration_list.append(time.time())
-
-####
-# End lasso ten dataset
-####
-
-#######
-# End linear SVM
-#######
-
-# end timing
-timings_list.append(['svm linear time end', time.time()])
-
-#######
-# Start rbf SVM
-#######
-
-# start timing
-timings_list.append(['SVM Gaussian duration:', time.time()])
-
-####
-# Start pear five dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-# create a rbf SVM classifier
-svm_classifier_rbf = svm.SVC(kernel = 'rbf')
-
-# fit the classifier on training data
-svm_classifier_rbf.fit(pearsons_scaled_df_train_x, 
-                       pearsons_scaled_df_train_y)
-
-# Predict using 2018 feature data
-prediction_rbf = svm_classifier_rbf.predict(pearsons_scaled_df_test_x)
-
-# calculate error rate
-global_accuracy.append(100-(round(np.mean(prediction_rbf != 
-                                   pearsons_scaled_df_test_y) * 100, 2)))
-
-# end time
-algorithm_duration_list.append(time.time())
-
-####
-# End pear five dataset
-####
-
-####
-# Start ols dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-# create a rbf SVM classifier
-svm_classifier_rbf = svm.SVC(kernel = 'rbf')
-
-# fit the classifier on training data
-svm_classifier_rbf.fit(ols_scaled_df_train_x, 
-                       ols_scaled_df_train_y)
-
-# Predict using 2018 feature data
-prediction_rbf = svm_classifier_rbf.predict(ols_scaled_df_test_x)
-
-# calculate error rate
-global_accuracy.append(100-(round(np.mean(prediction_rbf != 
-                                         ols_scaled_df_test_y) * 100, 2)))
-
-# end time
-algorithm_duration_list.append(time.time())
-
-####
-# End ols dataset
-####
-
-####
-# Start rfe dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-# create a rbf SVM classifier
-svm_classifier_rbf = svm.SVC(kernel = 'rbf')
-
-# fit the classifier on training data
-svm_classifier_rbf.fit(rfe_scaled_df_train_x, 
-                       rfe_scaled_df_train_y)
-
-# Predict using 2018 feature data
-prediction_rbf = svm_classifier_rbf.predict(rfe_scaled_df_test_x)
-
-# calculate error rate
-global_accuracy.append(100-(round(np.mean(prediction_rbf != 
-                                         rfe_scaled_df_test_y) * 100, 2)))
-
-# end time
-algorithm_duration_list.append(time.time())
-
-####
-# End rfe dataset
-####
-
-####
-# Start lasso dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-# create a rbf SVM classifier
-svm_classifier_rbf = svm.SVC(kernel = 'rbf')
-
-# fit the classifier on training data
-svm_classifier_rbf.fit(lasso_scaled_df_train_x, 
-                       lasso_scaled_df_train_y)
-
-# Predict using 2018 feature data
-prediction_rbf = svm_classifier_rbf.predict(lasso_scaled_df_test_x)
-
-# calculate error rate
-global_accuracy.append(100-(round(np.mean(prediction_rbf != 
-                                         lasso_scaled_df_test_y) * 100, 2)))
-
-# end time
-algorithm_duration_list.append(time.time())
-
-####
-# End lasso dataset
-####
-
-#######
-# End rbf SVM
-#######
-
-# end timing
-timings_list.append(['svm rbf time end', time.time()])
-
-#######
-# Start poly SVM
-#######
-
-# start timing
-timings_list.append(['SVM poly duration:', time.time()])
-
-####
-# Start pear five dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-# create a poly SVM classifier
-svm_classifier_poly = svm.SVC(kernel = 'poly')
-
-# fit the classifier on training data
-svm_classifier_poly.fit(pearsons_scaled_df_train_x, 
-                        pearsons_scaled_df_train_y)
-
-# Predict using 2018 feature data
-prediction_poly = svm_classifier_poly.predict(pearsons_scaled_df_test_x)
-
-# calculate error rate
-global_accuracy.append(100-(round(np.mean(prediction_poly != 
-                                   pearsons_scaled_df_test_y) * 100, 2)))
-
-# end time
-algorithm_duration_list.append(time.time())
-
-####
-# End pear five dataset
-####
-
-####
-# Start ols dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-# create a poly SVM classifier
-svm_classifier_poly = svm.SVC(kernel = 'poly')
-
-# fit the classifier on training data
-svm_classifier_poly.fit(ols_scaled_df_train_x, 
-                        ols_scaled_df_train_y)
-
-# Predict using 2018 feature data
-prediction_poly = svm_classifier_poly.predict(ols_scaled_df_test_x)
-
-# calculate error rate
-global_accuracy.append(100-(round(np.mean(prediction_poly != 
-                                         ols_scaled_df_test_y) * 100, 2)))
-
-# end time
-algorithm_duration_list.append(time.time())
-
-####
-# End ols dataset
-####
-
-####
-# Start rfe dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-# create a poly SVM classifier
-svm_classifier_poly = svm.SVC(kernel = 'poly')
-
-# fit the classifier on training data
-svm_classifier_poly.fit(rfe_scaled_df_train_x, 
-                        rfe_scaled_df_train_y)
-
-# Predict using 2018 feature data
-prediction_poly = svm_classifier_poly.predict(rfe_scaled_df_test_x)
-
-# calculate error rate
-global_accuracy.append(100-(round(np.mean(prediction_poly != 
-                                         rfe_scaled_df_test_y) * 100, 2)))
-
-# end time
-algorithm_duration_list.append(time.time())
-
-####
-# End rfe dataset
-####
-
-####
-# Start lasso dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-# create a poly SVM classifier
-svm_classifier_poly = svm.SVC(kernel = 'poly')
-
-# fit the classifier on training data
-svm_classifier_poly.fit(lasso_scaled_df_train_x, 
-                        lasso_scaled_df_train_y)
-
-# Predict using 2018 feature data
-prediction_poly = svm_classifier_poly.predict(lasso_scaled_df_test_x)
-
-# calculate error rate
-global_accuracy.append(100-(round(np.mean(prediction_poly != 
-                                         lasso_scaled_df_test_y) * 100, 2)))
-
-# end time
-algorithm_duration_list.append(time.time())
-
-####
-# End lasso dataset
-####
-
-#######
-# End poly SVM
-#######
-
-#############
-# End SVM
-#############
-
-# end timing
-timings_list.append(['svm poly time end', time.time()])
-
-#############
-# Start log regression liblinear solver
-#############
-
-# start timing
-timings_list.append(['Logistic Regression liblinear duration:', time.time()])
-
-####
-# Start pear five dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-# Create a logistic classifier
-# set solver to avoid the warning
-log_reg_classifier = LogisticRegression(solver = 'liblinear')
-
-# Train the classifier on 2017 data
-log_reg_classifier.fit(pearsons_scaled_df_train_x, 
-                       pearsons_scaled_df_train_y)
-
-# Predict using 2018 feature data
-prediction = log_reg_classifier.predict(pearsons_scaled_df_test_x)
-
-# append the models accruacy to the accuracy list
-global_accuracy.append(round(np.mean(prediction == 
-                              pearsons_scaled_df_test_y) * 100, 2))
-
-# end time
-algorithm_duration_list.append(time.time())
-
-####
-# End pear five dataset
-####
-
-####
-# Start ols dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-# Create a logistic classifier
-# set solver to avoid the warning
-log_reg_classifier = LogisticRegression(solver = 'liblinear')
-
-# Train the classifier on 2017 data
-log_reg_classifier.fit(ols_scaled_df_train_x, 
-                       ols_scaled_df_train_y)
-
-# Predict using 2018 feature data
-prediction = log_reg_classifier.predict(ols_scaled_df_test_x)
-
-
-# append the models accruacy to the accuracy list
-global_accuracy.append(round(np.mean(prediction == 
-                              ols_scaled_df_test_y) * 100, 2))
-
-# end time
-algorithm_duration_list.append(time.time())
-
-####
-# End ols dataset
-####
-
-####
-# Start rfe dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-# Create a logistic classifier
-# set solver to avoid the warning
-log_reg_classifier = LogisticRegression(solver = 'liblinear')
-
-# Train the classifier on 2017 data
-log_reg_classifier.fit(rfe_scaled_df_train_x, 
-                       rfe_scaled_df_train_y)
-
-# Predict using 2018 feature data
-prediction = log_reg_classifier.predict(rfe_scaled_df_test_x)
-
-# append the models accruacy to the accuracy list
-global_accuracy.append(round(np.mean(prediction == 
-                              rfe_scaled_df_test_y) * 100, 2))
-
-# end time
-algorithm_duration_list.append(time.time())
-
-####
-# End rfe dataset
-####
-
-####
-# Start lasso dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-# Create a logistic classifier
-# set solver to avoid the warning
-log_reg_classifier = LogisticRegression(solver = 'liblinear')
-
-# Train the classifier on 2017 data
-log_reg_classifier.fit(lasso_scaled_df_train_x, 
-                       lasso_scaled_df_train_y)
-
-# Predict using 2018 feature data
-prediction = log_reg_classifier.predict(lasso_scaled_df_test_x)
-
-# append the models accruacy to the accuracy list
-global_accuracy.append(round(np.mean(prediction == 
-                              lasso_scaled_df_test_y) * 100, 2))
-
-# end time
-algorithm_duration_list.append(time.time())
-
-####
-# End lasso dataset
-####
-
-#############
-# End log regression liblinear solver
-#############
-
-# end timing
-timings_list.append(['log lib time end', time.time()])
-
-#############
-# Start log regression sag solver
-#############
-
-# start timing
-timings_list.append(['Logistic Regression sag duration:', time.time()])
-
-####
-# Start pear five dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-# Create a logistic classifier
-# set solver to avoid the warning
-log_reg_classifier = LogisticRegression(solver = 'sag')
-
-# Train the classifier on 2017 data
-log_reg_classifier.fit(pearsons_scaled_df_train_x, 
-                       pearsons_scaled_df_train_y)
-
-# Predict using 2018 feature data
-prediction = log_reg_classifier.predict(pearsons_scaled_df_test_x)
-
-# append the models accruacy to the accuracy list
-global_accuracy.append(round(np.mean(prediction == 
-                              pearsons_scaled_df_test_y) * 100, 2))
-
-# end time
-algorithm_duration_list.append(time.time())
-
-####
-# End pear five dataset
-####
-
-####
-# Start ols dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-# Create a logistic classifier
-# set solver to avoid the warning
-log_reg_classifier = LogisticRegression(solver = 'sag')
-
-# Train the classifier on 2017 data
-log_reg_classifier.fit(ols_scaled_df_train_x, 
-                       ols_scaled_df_train_y)
-
-# Predict using 2018 feature data
-prediction = log_reg_classifier.predict(ols_scaled_df_test_x)
-
-# append the models accruacy to the accuracy list
-global_accuracy.append(round(np.mean(prediction == 
-                              ols_scaled_df_test_y) * 100, 2))
-
-# end time
-algorithm_duration_list.append(time.time())
-
-####
-# End ols dataset
-####
-
-####
-# Start rfe dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-# Create a logistic classifier
-# set solver to avoid the warning
-log_reg_classifier = LogisticRegression(solver = 'sag')
-
-# Train the classifier on 2017 data
-log_reg_classifier.fit(rfe_scaled_df_train_x, 
-                       rfe_scaled_df_train_y)
-
-# Predict using 2018 feature data
-prediction = log_reg_classifier.predict(rfe_scaled_df_test_x)
-
-# append the models accruacy to the accuracy list
-global_accuracy.append(round(np.mean(prediction == 
-                              rfe_scaled_df_test_y) * 100, 2))
-
-# end time
-algorithm_duration_list.append(time.time())
-
-####
-# End rfe dataset
-####
-
-####
-# Start lasso dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-# Create a logistic classifier
-# set solver to avoid the warning
-log_reg_classifier = LogisticRegression(solver = 'sag')
-
-# Train the classifier on 2017 data
-log_reg_classifier.fit(lasso_scaled_df_train_x, 
-                       lasso_scaled_df_train_y)
-
-# Predict using 2018 feature data
-prediction = log_reg_classifier.predict(lasso_scaled_df_test_x)
-
-# append the models accruacy to the accuracy list
-global_accuracy.append(round(np.mean(prediction == 
-                              lasso_scaled_df_test_y) * 100, 2))
-
-# end time
-algorithm_duration_list.append(time.time())
-
-####
-# End lasso dataset
-####
-
-#############
-# End log regression sag solver
-#############
-
-# end timing
-timings_list.append(['log sag time end', time.time()])
-
-#############
-# Start log regression newton-cg solver
-#############
-
-# start timing
-timings_list.append(['Logistic Regression newton-cg duration:', time.time()])
-
-####
-# Start pear five dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-# Create a logistic classifier
-# set solver to avoid the warning
-log_reg_classifier = LogisticRegression(solver = 'newton-cg')
-
-# Train the classifier on 2017 data
-log_reg_classifier.fit(pearsons_scaled_df_train_x, 
-                       pearsons_scaled_df_train_y)
-
-# Predict using 2018 feature data
-prediction = log_reg_classifier.predict(pearsons_scaled_df_test_x)
-
-# append the models accruacy to the accuracy list
-global_accuracy.append(round(np.mean(prediction == 
-                              pearsons_scaled_df_test_y) * 100, 2))
-
-# end time
-algorithm_duration_list.append(time.time())
-
-####
-# End pear five dataset
-####
-
-####
-# Start ols dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-# Create a logistic classifier
-# set solver to avoid the warning
-log_reg_classifier = LogisticRegression(solver = 'newton-cg')
-
-# Train the classifier on 2017 data
-log_reg_classifier.fit(ols_scaled_df_train_x, 
-                       ols_scaled_df_train_y)
-
-# Predict using 2018 feature data
-prediction = log_reg_classifier.predict(ols_scaled_df_test_x)
-
-# append the models accruacy to the accuracy list
-global_accuracy.append(round(np.mean(prediction == 
-                              ols_scaled_df_test_y) * 100, 2))
-
-# end time
-algorithm_duration_list.append(time.time())
-
-####
-# End ols dataset
-####
-
-####
-# Start rfe dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-# Create a logistic classifier
-# set solver to avoid the warning
-log_reg_classifier = LogisticRegression(solver = 'newton-cg')
-
-# Train the classifier on 2017 data
-log_reg_classifier.fit(rfe_scaled_df_train_x, 
-                       rfe_scaled_df_train_y)
-
-# Predict using 2018 feature data
-prediction = log_reg_classifier.predict(rfe_scaled_df_test_x)
-
-# append the models accruacy to the accuracy list
-global_accuracy.append(round(np.mean(prediction == 
-                              rfe_scaled_df_test_y) * 100, 2))
-
-# end time
-algorithm_duration_list.append(time.time())
-
-####
-# End rfe dataset
-####
-
-####
-# Start lasso dataset
-####
-
-# start time
-algorithm_duration_list.append(time.time())
-
-# Create a logistic classifier
-# set solver to avoid the warning
-log_reg_classifier = LogisticRegression(solver = 'newton-cg')
-
-# Train the classifier on 2017 data
-log_reg_classifier.fit(lasso_scaled_df_train_x, 
-                       lasso_scaled_df_train_y)
-
-# Predict using 2018 feature data
-prediction = log_reg_classifier.predict(lasso_scaled_df_test_x)
-
-# append the models accruacy to the accuracy list
-global_accuracy.append(round(np.mean(prediction == 
-                              lasso_scaled_df_test_y) * 100, 2))
-
-# end time
-algorithm_duration_list.append(time.time())
-
-####
-# End lasso dataset
-####
-
-#############
-# End log regression newton-cg solver
-#############
-
-# end timing
-timings_list.append(['log newt time end', time.time()])
-
-################
-# End building scaled algorithms
-################
-timings_list.append(['scaled time end', time.time()])
-
-timings_list.append(['global time end', time.time()])
+########
+## Start linear SVM
+########
+#
+## start timing
+#timings_list.append(['SVM linear duration:', time.time()])
+#
+#####
+## Start pear five dataset
+#####
+#
+## start time
+#algorithm_duration_list.append(time.time())
+#
+## create a linear SVM classifier
+#svm_classifier_linear = svm.SVC(kernel = 'linear')
+#
+## fit the classifier on training data
+#svm_classifier_linear.fit(pearsons_scaled_df_train_x, 
+#                          pearsons_scaled_df_train_y)
+#
+## Predict using 2018 feature data
+#prediction_linear = svm_classifier_linear.predict(pearsons_scaled_df_test_x)
+#
+## calculate error rate
+#global_accuracy.append(100-(round(np.mean(prediction_linear != 
+#                                   pearsons_scaled_df_test_y) * 100, 2)))
+#
+## end time
+#algorithm_duration_list.append(time.time()) 
+#
+#####
+## End pear five dataset
+#####
+#
+#####
+## Start ols ten dataset
+#####
+#
+## start time
+#algorithm_duration_list.append(time.time())
+#
+## create a linear SVM classifier
+#svm_classifier_linear = svm.SVC(kernel = 'linear')
+#
+## fit the classifier on training data
+#svm_classifier_linear.fit(ols_scaled_df_train_x, 
+#                          ols_scaled_df_train_y)
+#
+## Predict using 2018 feature data
+#prediction_linear = svm_classifier_linear.predict(ols_scaled_df_test_x)
+#
+## calculate error rate
+#global_accuracy.append(100-(round(np.mean(prediction_linear != 
+#                                         ols_scaled_df_test_y) * 100, 2)))
+#
+## end time
+#algorithm_duration_list.append(time.time())
+#
+#####
+## End ols ten dataset
+#####
+#
+#####
+## Start rfe ten dataset
+#####
+#
+## start time
+#algorithm_duration_list.append(time.time())
+#
+## create a linear SVM classifier
+#svm_classifier_linear = svm.SVC(kernel = 'linear')
+#
+## fit the classifier on training data
+#svm_classifier_linear.fit(rfe_scaled_df_train_x, 
+#                          rfe_scaled_df_train_y)
+#
+## Predict using 2018 feature data
+#prediction_linear = svm_classifier_linear.predict(rfe_scaled_df_test_x)
+#
+## calculate error rate
+#global_accuracy.append(100-(round(np.mean(prediction_linear != 
+#                                         rfe_scaled_df_test_y) * 100, 2)))
+#
+## end time
+#algorithm_duration_list.append(time.time())
+#
+#####
+## End rfe ten dataset
+#####
+#
+#####
+## Start lasso ten dataset
+#####
+#
+## start time
+#algorithm_duration_list.append(time.time())
+#
+## create a linear SVM classifier
+#svm_classifier_linear = svm.SVC(kernel = 'linear')
+#
+## fit the classifier on training data
+#svm_classifier_linear.fit(lasso_scaled_df_train_x, 
+#                          lasso_scaled_df_train_y)
+#
+## Predict using 2018 feature data
+#prediction_linear = svm_classifier_linear.predict(lasso_scaled_df_test_x)
+#
+## calculate error rate
+#global_accuracy.append(100-(round(np.mean(prediction_linear != 
+#                                         lasso_scaled_df_test_y) * 100, 2)))
+#
+## end time
+#algorithm_duration_list.append(time.time())
+#
+#####
+## End lasso ten dataset
+#####
+#
+########
+## End linear SVM
+########
+#
+## end timing
+#timings_list.append(['svm linear time end', time.time()])
+#
+########
+## Start rbf SVM
+########
+#
+## start timing
+#timings_list.append(['SVM Gaussian duration:', time.time()])
+#
+#####
+## Start pear five dataset
+#####
+#
+## start time
+#algorithm_duration_list.append(time.time())
+#
+## create a rbf SVM classifier
+#svm_classifier_rbf = svm.SVC(kernel = 'rbf')
+#
+## fit the classifier on training data
+#svm_classifier_rbf.fit(pearsons_scaled_df_train_x, 
+#                       pearsons_scaled_df_train_y)
+#
+## Predict using 2018 feature data
+#prediction_rbf = svm_classifier_rbf.predict(pearsons_scaled_df_test_x)
+#
+## calculate error rate
+#global_accuracy.append(100-(round(np.mean(prediction_rbf != 
+#                                   pearsons_scaled_df_test_y) * 100, 2)))
+#
+## end time
+#algorithm_duration_list.append(time.time())
+#
+#####
+## End pear five dataset
+#####
+#
+#####
+## Start ols dataset
+#####
+#
+## start time
+#algorithm_duration_list.append(time.time())
+#
+## create a rbf SVM classifier
+#svm_classifier_rbf = svm.SVC(kernel = 'rbf')
+#
+## fit the classifier on training data
+#svm_classifier_rbf.fit(ols_scaled_df_train_x, 
+#                       ols_scaled_df_train_y)
+#
+## Predict using 2018 feature data
+#prediction_rbf = svm_classifier_rbf.predict(ols_scaled_df_test_x)
+#
+## calculate error rate
+#global_accuracy.append(100-(round(np.mean(prediction_rbf != 
+#                                         ols_scaled_df_test_y) * 100, 2)))
+#
+## end time
+#algorithm_duration_list.append(time.time())
+#
+#####
+## End ols dataset
+#####
+#
+#####
+## Start rfe dataset
+#####
+#
+## start time
+#algorithm_duration_list.append(time.time())
+#
+## create a rbf SVM classifier
+#svm_classifier_rbf = svm.SVC(kernel = 'rbf')
+#
+## fit the classifier on training data
+#svm_classifier_rbf.fit(rfe_scaled_df_train_x, 
+#                       rfe_scaled_df_train_y)
+#
+## Predict using 2018 feature data
+#prediction_rbf = svm_classifier_rbf.predict(rfe_scaled_df_test_x)
+#
+## calculate error rate
+#global_accuracy.append(100-(round(np.mean(prediction_rbf != 
+#                                         rfe_scaled_df_test_y) * 100, 2)))
+#
+## end time
+#algorithm_duration_list.append(time.time())
+#
+#####
+## End rfe dataset
+#####
+#
+#####
+## Start lasso dataset
+#####
+#
+## start time
+#algorithm_duration_list.append(time.time())
+#
+## create a rbf SVM classifier
+#svm_classifier_rbf = svm.SVC(kernel = 'rbf')
+#
+## fit the classifier on training data
+#svm_classifier_rbf.fit(lasso_scaled_df_train_x, 
+#                       lasso_scaled_df_train_y)
+#
+## Predict using 2018 feature data
+#prediction_rbf = svm_classifier_rbf.predict(lasso_scaled_df_test_x)
+#
+## calculate error rate
+#global_accuracy.append(100-(round(np.mean(prediction_rbf != 
+#                                         lasso_scaled_df_test_y) * 100, 2)))
+#
+## end time
+#algorithm_duration_list.append(time.time())
+#
+#####
+## End lasso dataset
+#####
+#
+########
+## End rbf SVM
+########
+#
+## end timing
+#timings_list.append(['svm rbf time end', time.time()])
+#
+########
+## Start poly SVM
+########
+#
+## start timing
+#timings_list.append(['SVM poly duration:', time.time()])
+#
+#####
+## Start pear five dataset
+#####
+#
+## start time
+#algorithm_duration_list.append(time.time())
+#
+## create a poly SVM classifier
+#svm_classifier_poly = svm.SVC(kernel = 'poly')
+#
+## fit the classifier on training data
+#svm_classifier_poly.fit(pearsons_scaled_df_train_x, 
+#                        pearsons_scaled_df_train_y)
+#
+## Predict using 2018 feature data
+#prediction_poly = svm_classifier_poly.predict(pearsons_scaled_df_test_x)
+#
+## calculate error rate
+#global_accuracy.append(100-(round(np.mean(prediction_poly != 
+#                                   pearsons_scaled_df_test_y) * 100, 2)))
+#
+## end time
+#algorithm_duration_list.append(time.time())
+#
+#####
+## End pear five dataset
+#####
+#
+#####
+## Start ols dataset
+#####
+#
+## start time
+#algorithm_duration_list.append(time.time())
+#
+## create a poly SVM classifier
+#svm_classifier_poly = svm.SVC(kernel = 'poly')
+#
+## fit the classifier on training data
+#svm_classifier_poly.fit(ols_scaled_df_train_x, 
+#                        ols_scaled_df_train_y)
+#
+## Predict using 2018 feature data
+#prediction_poly = svm_classifier_poly.predict(ols_scaled_df_test_x)
+#
+## calculate error rate
+#global_accuracy.append(100-(round(np.mean(prediction_poly != 
+#                                         ols_scaled_df_test_y) * 100, 2)))
+#
+## end time
+#algorithm_duration_list.append(time.time())
+#
+#####
+## End ols dataset
+#####
+#
+#####
+## Start rfe dataset
+#####
+#
+## start time
+#algorithm_duration_list.append(time.time())
+#
+## create a poly SVM classifier
+#svm_classifier_poly = svm.SVC(kernel = 'poly')
+#
+## fit the classifier on training data
+#svm_classifier_poly.fit(rfe_scaled_df_train_x, 
+#                        rfe_scaled_df_train_y)
+#
+## Predict using 2018 feature data
+#prediction_poly = svm_classifier_poly.predict(rfe_scaled_df_test_x)
+#
+## calculate error rate
+#global_accuracy.append(100-(round(np.mean(prediction_poly != 
+#                                         rfe_scaled_df_test_y) * 100, 2)))
+#
+## end time
+#algorithm_duration_list.append(time.time())
+#
+#####
+## End rfe dataset
+#####
+#
+#####
+## Start lasso dataset
+#####
+#
+## start time
+#algorithm_duration_list.append(time.time())
+#
+## create a poly SVM classifier
+#svm_classifier_poly = svm.SVC(kernel = 'poly')
+#
+## fit the classifier on training data
+#svm_classifier_poly.fit(lasso_scaled_df_train_x, 
+#                        lasso_scaled_df_train_y)
+#
+## Predict using 2018 feature data
+#prediction_poly = svm_classifier_poly.predict(lasso_scaled_df_test_x)
+#
+## calculate error rate
+#global_accuracy.append(100-(round(np.mean(prediction_poly != 
+#                                         lasso_scaled_df_test_y) * 100, 2)))
+#
+## end time
+#algorithm_duration_list.append(time.time())
+#
+#####
+## End lasso dataset
+#####
+#
+########
+## End poly SVM
+########
+#
+##############
+## End SVM
+##############
+#
+## end timing
+#timings_list.append(['svm poly time end', time.time()])
+#
+##############
+## Start log regression liblinear solver
+##############
+#
+## start timing
+#timings_list.append(['Logistic Regression liblinear duration:', time.time()])
+#
+#####
+## Start pear five dataset
+#####
+#
+## start time
+#algorithm_duration_list.append(time.time())
+#
+## Create a logistic classifier
+## set solver to avoid the warning
+#log_reg_classifier = LogisticRegression(solver = 'liblinear')
+#
+## Train the classifier on 2017 data
+#log_reg_classifier.fit(pearsons_scaled_df_train_x, 
+#                       pearsons_scaled_df_train_y)
+#
+## Predict using 2018 feature data
+#prediction = log_reg_classifier.predict(pearsons_scaled_df_test_x)
+#
+## append the models accruacy to the accuracy list
+#global_accuracy.append(round(np.mean(prediction == 
+#                              pearsons_scaled_df_test_y) * 100, 2))
+#
+## end time
+#algorithm_duration_list.append(time.time())
+#
+#####
+## End pear five dataset
+#####
+#
+#####
+## Start ols dataset
+#####
+#
+## start time
+#algorithm_duration_list.append(time.time())
+#
+## Create a logistic classifier
+## set solver to avoid the warning
+#log_reg_classifier = LogisticRegression(solver = 'liblinear')
+#
+## Train the classifier on 2017 data
+#log_reg_classifier.fit(ols_scaled_df_train_x, 
+#                       ols_scaled_df_train_y)
+#
+## Predict using 2018 feature data
+#prediction = log_reg_classifier.predict(ols_scaled_df_test_x)
+#
+#
+## append the models accruacy to the accuracy list
+#global_accuracy.append(round(np.mean(prediction == 
+#                              ols_scaled_df_test_y) * 100, 2))
+#
+## end time
+#algorithm_duration_list.append(time.time())
+#
+#####
+## End ols dataset
+#####
+#
+#####
+## Start rfe dataset
+#####
+#
+## start time
+#algorithm_duration_list.append(time.time())
+#
+## Create a logistic classifier
+## set solver to avoid the warning
+#log_reg_classifier = LogisticRegression(solver = 'liblinear')
+#
+## Train the classifier on 2017 data
+#log_reg_classifier.fit(rfe_scaled_df_train_x, 
+#                       rfe_scaled_df_train_y)
+#
+## Predict using 2018 feature data
+#prediction = log_reg_classifier.predict(rfe_scaled_df_test_x)
+#
+## append the models accruacy to the accuracy list
+#global_accuracy.append(round(np.mean(prediction == 
+#                              rfe_scaled_df_test_y) * 100, 2))
+#
+## end time
+#algorithm_duration_list.append(time.time())
+#
+#####
+## End rfe dataset
+#####
+#
+#####
+## Start lasso dataset
+#####
+#
+## start time
+#algorithm_duration_list.append(time.time())
+#
+## Create a logistic classifier
+## set solver to avoid the warning
+#log_reg_classifier = LogisticRegression(solver = 'liblinear')
+#
+## Train the classifier on 2017 data
+#log_reg_classifier.fit(lasso_scaled_df_train_x, 
+#                       lasso_scaled_df_train_y)
+#
+## Predict using 2018 feature data
+#prediction = log_reg_classifier.predict(lasso_scaled_df_test_x)
+#
+## append the models accruacy to the accuracy list
+#global_accuracy.append(round(np.mean(prediction == 
+#                              lasso_scaled_df_test_y) * 100, 2))
+#
+## end time
+#algorithm_duration_list.append(time.time())
+#
+#####
+## End lasso dataset
+#####
+#
+##############
+## End log regression liblinear solver
+##############
+#
+## end timing
+#timings_list.append(['log lib time end', time.time()])
+#
+##############
+## Start log regression sag solver
+##############
+#
+## start timing
+#timings_list.append(['Logistic Regression sag duration:', time.time()])
+#
+#####
+## Start pear five dataset
+#####
+#
+## start time
+#algorithm_duration_list.append(time.time())
+#
+## Create a logistic classifier
+## set solver to avoid the warning
+#log_reg_classifier = LogisticRegression(solver = 'sag')
+#
+## Train the classifier on 2017 data
+#log_reg_classifier.fit(pearsons_scaled_df_train_x, 
+#                       pearsons_scaled_df_train_y)
+#
+## Predict using 2018 feature data
+#prediction = log_reg_classifier.predict(pearsons_scaled_df_test_x)
+#
+## append the models accruacy to the accuracy list
+#global_accuracy.append(round(np.mean(prediction == 
+#                              pearsons_scaled_df_test_y) * 100, 2))
+#
+## end time
+#algorithm_duration_list.append(time.time())
+#
+#####
+## End pear five dataset
+#####
+#
+#####
+## Start ols dataset
+#####
+#
+## start time
+#algorithm_duration_list.append(time.time())
+#
+## Create a logistic classifier
+## set solver to avoid the warning
+#log_reg_classifier = LogisticRegression(solver = 'sag')
+#
+## Train the classifier on 2017 data
+#log_reg_classifier.fit(ols_scaled_df_train_x, 
+#                       ols_scaled_df_train_y)
+#
+## Predict using 2018 feature data
+#prediction = log_reg_classifier.predict(ols_scaled_df_test_x)
+#
+## append the models accruacy to the accuracy list
+#global_accuracy.append(round(np.mean(prediction == 
+#                              ols_scaled_df_test_y) * 100, 2))
+#
+## end time
+#algorithm_duration_list.append(time.time())
+#
+#####
+## End ols dataset
+#####
+#
+#####
+## Start rfe dataset
+#####
+#
+## start time
+#algorithm_duration_list.append(time.time())
+#
+## Create a logistic classifier
+## set solver to avoid the warning
+#log_reg_classifier = LogisticRegression(solver = 'sag')
+#
+## Train the classifier on 2017 data
+#log_reg_classifier.fit(rfe_scaled_df_train_x, 
+#                       rfe_scaled_df_train_y)
+#
+## Predict using 2018 feature data
+#prediction = log_reg_classifier.predict(rfe_scaled_df_test_x)
+#
+## append the models accruacy to the accuracy list
+#global_accuracy.append(round(np.mean(prediction == 
+#                              rfe_scaled_df_test_y) * 100, 2))
+#
+## end time
+#algorithm_duration_list.append(time.time())
+#
+#####
+## End rfe dataset
+#####
+#
+#####
+## Start lasso dataset
+#####
+#
+## start time
+#algorithm_duration_list.append(time.time())
+#
+## Create a logistic classifier
+## set solver to avoid the warning
+#log_reg_classifier = LogisticRegression(solver = 'sag')
+#
+## Train the classifier on 2017 data
+#log_reg_classifier.fit(lasso_scaled_df_train_x, 
+#                       lasso_scaled_df_train_y)
+#
+## Predict using 2018 feature data
+#prediction = log_reg_classifier.predict(lasso_scaled_df_test_x)
+#
+## append the models accruacy to the accuracy list
+#global_accuracy.append(round(np.mean(prediction == 
+#                              lasso_scaled_df_test_y) * 100, 2))
+#
+## end time
+#algorithm_duration_list.append(time.time())
+#
+#####
+## End lasso dataset
+#####
+#
+##############
+## End log regression sag solver
+##############
+#
+## end timing
+#timings_list.append(['log sag time end', time.time()])
+#
+##############
+## Start log regression newton-cg solver
+##############
+#
+## start timing
+#timings_list.append(['Logistic Regression newton-cg duration:', time.time()])
+#
+#####
+## Start pear five dataset
+#####
+#
+## start time
+#algorithm_duration_list.append(time.time())
+#
+## Create a logistic classifier
+## set solver to avoid the warning
+#log_reg_classifier = LogisticRegression(solver = 'newton-cg')
+#
+## Train the classifier on 2017 data
+#log_reg_classifier.fit(pearsons_scaled_df_train_x, 
+#                       pearsons_scaled_df_train_y)
+#
+## Predict using 2018 feature data
+#prediction = log_reg_classifier.predict(pearsons_scaled_df_test_x)
+#
+## append the models accruacy to the accuracy list
+#global_accuracy.append(round(np.mean(prediction == 
+#                              pearsons_scaled_df_test_y) * 100, 2))
+#
+## end time
+#algorithm_duration_list.append(time.time())
+#
+#####
+## End pear five dataset
+#####
+#
+#####
+## Start ols dataset
+#####
+#
+## start time
+#algorithm_duration_list.append(time.time())
+#
+## Create a logistic classifier
+## set solver to avoid the warning
+#log_reg_classifier = LogisticRegression(solver = 'newton-cg')
+#
+## Train the classifier on 2017 data
+#log_reg_classifier.fit(ols_scaled_df_train_x, 
+#                       ols_scaled_df_train_y)
+#
+## Predict using 2018 feature data
+#prediction = log_reg_classifier.predict(ols_scaled_df_test_x)
+#
+## append the models accruacy to the accuracy list
+#global_accuracy.append(round(np.mean(prediction == 
+#                              ols_scaled_df_test_y) * 100, 2))
+#
+## end time
+#algorithm_duration_list.append(time.time())
+#
+#####
+## End ols dataset
+#####
+#
+#####
+## Start rfe dataset
+#####
+#
+## start time
+#algorithm_duration_list.append(time.time())
+#
+## Create a logistic classifier
+## set solver to avoid the warning
+#log_reg_classifier = LogisticRegression(solver = 'newton-cg')
+#
+## Train the classifier on 2017 data
+#log_reg_classifier.fit(rfe_scaled_df_train_x, 
+#                       rfe_scaled_df_train_y)
+#
+## Predict using 2018 feature data
+#prediction = log_reg_classifier.predict(rfe_scaled_df_test_x)
+#
+## append the models accruacy to the accuracy list
+#global_accuracy.append(round(np.mean(prediction == 
+#                              rfe_scaled_df_test_y) * 100, 2))
+#
+## end time
+#algorithm_duration_list.append(time.time())
+#
+#####
+## End rfe dataset
+#####
+#
+#####
+## Start lasso dataset
+#####
+#
+## start time
+#algorithm_duration_list.append(time.time())
+#
+## Create a logistic classifier
+## set solver to avoid the warning
+#log_reg_classifier = LogisticRegression(solver = 'newton-cg')
+#
+## Train the classifier on 2017 data
+#log_reg_classifier.fit(lasso_scaled_df_train_x, 
+#                       lasso_scaled_df_train_y)
+#
+## Predict using 2018 feature data
+#prediction = log_reg_classifier.predict(lasso_scaled_df_test_x)
+#
+## append the models accruacy to the accuracy list
+#global_accuracy.append(round(np.mean(prediction == 
+#                              lasso_scaled_df_test_y) * 100, 2))
+#
+## end time
+#algorithm_duration_list.append(time.time())
+#
+#####
+## End lasso dataset
+#####
+#
+##############
+## End log regression newton-cg solver
+##############
+#
+## end timing
+#timings_list.append(['log newt time end', time.time()])
+#
+#################
+## End building scaled algorithms
+#################
+#timings_list.append(['scaled time end', time.time()])
+#
+#timings_list.append(['global time end', time.time()])
 
 ####
 # Start prediction prints
 ####
 
-# create a list containing the attribute reduction methods
-attributes = ['Pearsons', 'OLS', 'RFE', 'Lasso']
+# reorder roc scores from highest to lowest
+roc_scores = {k: v for k, v in sorted(roc_scores.items(), \
+                                      key=lambda item: item[1], \
+                                      reverse = True)}
 
-# create a list containing the classifier names
-classifiers = ['Decision Tree', 'Naive Bayes', 'Random Forest', 'KNN', 'SVM', 
-               'SVM', 'SVM', 'Logistic Regression', 'Logistic Regression',
-               'Logistic Regression']
+# setup data for algorithm comparisons
+algorithms = ['GBM', 'Random Forest', 'KNN'] 
+accuracy = [99, 99.72, 99.71]
+roc = ['67.26%', '52.34%', '51.46%']
+duration = ['<1','<1','<1','<1']
 
-# Creates a dataframe containing information about the classifiers and accuracy
-prediction_df = pd.DataFrame(columns = ['classifier', 'details', 'attributes',
-                                        'accuracy', 'time'])
+# create a dataframe
+prediction_df = pd.DataFrame(list(zip(algorithms, accuracy, roc, duration)),
+                             columns = ['Algorithm', 'Accuracy', 'ROC Score',\
+                                        'Duration'])
+#
+## Creates a dataframe containing information about the classifiers and accuracy
+#prediction_df = pd.DataFrame(columns = ['Algorithm', 'Accuracy', 'ROC Score',\
+#                                        'Duration'])
+#
+## Build out a dataframe to store the classifiers and their accuracy
+#for i in range(0, len(algorithms)):
+#    for k in range(0, len(attributes)):
+#        prediction_df = prediction_df.append({'classifier' : classifiers[i],
+#                                      'details' : 'None',
+#                                      'attributes' : attributes[k],
+#                                      'accuracy' : 0,
+#                                      'time' : 0}, 
+#                                      ignore_index=True)
+#
+## Move indexes down 1 starting at 12 to add Random forest with full dataset
+#prediction_df.index = (prediction_df.index[:12].tolist() + 
+#                      (prediction_df.index[12:] + 1).tolist())
+#
+## Adds Random forest with full dataset to the dataframe
+#prediction_df.loc[12] = ['Random Forest', 'None', 'Full', 0, 0]
+#
+## reorders the indexes after the insert
+#prediction_df = prediction_df.sort_index()
+#
+## Updates the accuracy
+#prediction_df['accuracy'] = global_accuracy
+#
+## Manually set algorithm details
+## decision tree
+#prediction_df['details'].iloc[0:4] = 'Entropy'
+#
+## Naive Bayes
+#prediction_df['details'].iloc[4:7] = 'Gaussian'
+#
+## Random Forest tree/depth
+#prediction_df['details'].iloc[8] = '10 trees, 6 depth'
+#prediction_df['details'].iloc[9] = '19 trees, 10 depth'
+#prediction_df['details'].iloc[10] = '25 trees, 8 depth'
+#prediction_df['details'].iloc[11] = '21 trees, 10 depth'
+#prediction_df['details'].iloc[12] = '16 trees, 10 depth'
+#    
+## knn k value
+#prediction_df['details'].iloc[13] = 'K - 83'
+#prediction_df['details'].iloc[14] = 'K - 29'
+#prediction_df['details'].iloc[15] = 'K - 27'
+#prediction_df['details'].iloc[16] = 'K - 29'
+#
+## log liblinear solver
+#prediction_df['details'].iloc[17:21] = 'Linear'
+#
+## log sag solver
+#prediction_df['details'].iloc[21:25] = 'Gaussian'
+#
+## log newton-cg solver
+#prediction_df['details'].iloc[25:29] = 'Poly'
+#
+## log liblinear solver
+#prediction_df['details'].iloc[29:33] = 'Liblinear'
+#
+## log sag solver
+#prediction_df['details'].iloc[33:37] = 'Sag'
+#
+## log newton-cg solver
+#prediction_df['details'].iloc[37:41] = 'Newton-cg'
+#
+## creates a duration list
+#dur_list = []
+#
+## stores the durations of each algorithm from start to finish
+#for dur in range(0, len(algorithm_duration_list), 2):
+#    dur_list.append(algorithm_duration_list[dur + 1] - 
+#                    algorithm_duration_list[dur])
+#
+## stores the durations into the prediction_df
+#prediction_df['time'] = dur_list
+#
+## Print durations 
+#print('Durations for each of the major steps in the process,', 
+#      'measured in seconds\n', timings_list[1][0],
+#int(timings_list[2][1]) - int(timings_list[1][1]),'\n',
+#
+#timings_list[3][0],
+#int(timings_list[4][1]) - int(timings_list[3][1]),'\n',
+#
+#timings_list[5][0],
+#int(timings_list[6][1]) - int(timings_list[5][1]),'\n',
+#
+#timings_list[8][0],
+#int(timings_list[9][1]) - int(timings_list[8][1]),'\n',
+#
+#timings_list[10][0],
+#int(timings_list[11][1]) - int(timings_list[10][1]),'\n',
+#
+#timings_list[12][0],
+#int(timings_list[13][1]) - int(timings_list[12][1]),'\n',
+#
+#timings_list[7][0],
+#int(timings_list[14][1]) - int(timings_list[7][1]),'\n',
+#
+#timings_list[16][0],
+#int(timings_list[17][1]) - int(timings_list[16][1]),'\n',
+#
+#timings_list[18][0],
+#int(timings_list[19][1]) - int(timings_list[18][1]),'\n',
+#
+#timings_list[20][0],
+#int(timings_list[21][1]) - int(timings_list[20][1]),'\n',
+#
+#timings_list[22][0],
+#int(timings_list[23][1]) - int(timings_list[22][1]),'\n',
+#
+#timings_list[24][0],
+#int(timings_list[25][1]) - int(timings_list[24][1]),'\n',
+#
+#timings_list[26][0],
+#int(timings_list[27][1]) - int(timings_list[26][1]),'\n',
+#
+#timings_list[28][0],
+#int(timings_list[29][1]) - int(timings_list[28][1]),'\n',
+#
+#timings_list[15][0],
+#int(timings_list[30][1]) - int(timings_list[15][1]),'\n',
+#
+#timings_list[0][0],
+#int(timings_list[-1][1])- int(timings_list[0][1]))
+#
+#
+## Finds the most and least accurate algorithms
+#accurate = [prediction_df[prediction_df['accuracy'] == 
+#              max(prediction_df.accuracy)].values[0]]
+#
+#least_accurate = [prediction_df[prediction_df['accuracy'] == 
+#              min(prediction_df.accuracy)].values[0]]
+#
+#
+#print('The most accurate classifier was', accurate[0][0], 'using', 
+#      accurate[0][1], 'on the', accurate[0][2], 
+#      'attribute set with an accuracy of', accurate[0][3],'%')
+#
+#print('The least accurate classifier was', least_accurate[0][0], 'using', 
+#      least_accurate[0][1], 'on the', least_accurate[0][2], 
+#      'attribute set with an accuracy of', least_accurate[0][3],'%')
 
-# Build out a dataframe to store the classifiers and their accuracy
-for i in range(0, len(classifiers)):
-    for k in range(0, len(attributes)):
-        prediction_df = prediction_df.append({'classifier' : classifiers[i],
-                                      'details' : 'None',
-                                      'attributes' : attributes[k],
-                                      'accuracy' : 0,
-                                      'time' : 0}, 
-                                      ignore_index=True)
-
-# Move indexes down 1 starting at 12 to add Random forest with full dataset
-prediction_df.index = (prediction_df.index[:12].tolist() + 
-                      (prediction_df.index[12:] + 1).tolist())
-
-# Adds Random forest with full dataset to the dataframe
-prediction_df.loc[12] = ['Random Forest', 'None', 'Full', 0, 0]
-
-# reorders the indexes after the insert
-prediction_df = prediction_df.sort_index()
-
-# Updates the accuracy
-prediction_df['accuracy'] = global_accuracy
-
-# Manually set algorithm details
-# decision tree
-prediction_df['details'].iloc[0:4] = 'Entropy'
-
-# Naive Bayes
-prediction_df['details'].iloc[4:7] = 'Gaussian'
-
-# Random Forest tree/depth
-prediction_df['details'].iloc[8] = '10 trees, 6 depth'
-prediction_df['details'].iloc[9] = '19 trees, 10 depth'
-prediction_df['details'].iloc[10] = '25 trees, 8 depth'
-prediction_df['details'].iloc[11] = '21 trees, 10 depth'
-prediction_df['details'].iloc[12] = '16 trees, 10 depth'
     
-# knn k value
-prediction_df['details'].iloc[13] = 'K - 83'
-prediction_df['details'].iloc[14] = 'K - 29'
-prediction_df['details'].iloc[15] = 'K - 27'
-prediction_df['details'].iloc[16] = 'K - 29'
-
-# log liblinear solver
-prediction_df['details'].iloc[17:21] = 'Linear'
-
-# log sag solver
-prediction_df['details'].iloc[21:25] = 'Gaussian'
-
-# log newton-cg solver
-prediction_df['details'].iloc[25:29] = 'Poly'
-
-# log liblinear solver
-prediction_df['details'].iloc[29:33] = 'Liblinear'
-
-# log sag solver
-prediction_df['details'].iloc[33:37] = 'Sag'
-
-# log newton-cg solver
-prediction_df['details'].iloc[37:41] = 'Newton-cg'
-
-# creates a duration list
-dur_list = []
-
-# stores the durations of each algorithm from start to finish
-for dur in range(0, len(algorithm_duration_list), 2):
-    dur_list.append(algorithm_duration_list[dur + 1] - 
-                    algorithm_duration_list[dur])
-
-# stores the durations into the prediction_df
-prediction_df['time'] = dur_list
-
-# Print durations 
-print('Durations for each of the major steps in the process,', 
-      'measured in seconds\n', timings_list[1][0],
-int(timings_list[2][1]) - int(timings_list[1][1]),'\n',
-
-timings_list[3][0],
-int(timings_list[4][1]) - int(timings_list[3][1]),'\n',
-
-timings_list[5][0],
-int(timings_list[6][1]) - int(timings_list[5][1]),'\n',
-
-timings_list[8][0],
-int(timings_list[9][1]) - int(timings_list[8][1]),'\n',
-
-timings_list[10][0],
-int(timings_list[11][1]) - int(timings_list[10][1]),'\n',
-
-timings_list[12][0],
-int(timings_list[13][1]) - int(timings_list[12][1]),'\n',
-
-timings_list[7][0],
-int(timings_list[14][1]) - int(timings_list[7][1]),'\n',
-
-timings_list[16][0],
-int(timings_list[17][1]) - int(timings_list[16][1]),'\n',
-
-timings_list[18][0],
-int(timings_list[19][1]) - int(timings_list[18][1]),'\n',
-
-timings_list[20][0],
-int(timings_list[21][1]) - int(timings_list[20][1]),'\n',
-
-timings_list[22][0],
-int(timings_list[23][1]) - int(timings_list[22][1]),'\n',
-
-timings_list[24][0],
-int(timings_list[25][1]) - int(timings_list[24][1]),'\n',
-
-timings_list[26][0],
-int(timings_list[27][1]) - int(timings_list[26][1]),'\n',
-
-timings_list[28][0],
-int(timings_list[29][1]) - int(timings_list[28][1]),'\n',
-
-timings_list[15][0],
-int(timings_list[30][1]) - int(timings_list[15][1]),'\n',
-
-timings_list[0][0],
-int(timings_list[-1][1])- int(timings_list[0][1]))
-
-
-# Finds the most and least accurate algorithms
-accurate = [prediction_df[prediction_df['accuracy'] == 
-              max(prediction_df.accuracy)].values[0]]
-
-least_accurate = [prediction_df[prediction_df['accuracy'] == 
-              min(prediction_df.accuracy)].values[0]]
-
-
-print('The most accurate classifier was', accurate[0][0], 'using', 
-      accurate[0][1], 'on the', accurate[0][2], 
-      'attribute set with an accuracy of', accurate[0][3],'%')
-
-print('The least accurate classifier was', least_accurate[0][0], 'using', 
-      least_accurate[0][1], 'on the', least_accurate[0][2], 
-      'attribute set with an accuracy of', least_accurate[0][3],'%')
-
 ####
-# Start rf pearsons prediction prints
+# Start GMB prediction prints
 ####
-
-# confusion matrix for random forest pearsons
-cm_one = confusion_matrix(pearsons_df_test_y, rf_pearsons_pred)
-tn, fp, fn, tp  = confusion_matrix(pearsons_df_test_y, \
-                                   rf_pearsons_pred).ravel()
-
-# Create confusion matrix heatmap
-# setup class names and tick marks
-class_names=[0,1]
-fig, ax = plt.subplots()
-tick_marks = np.arange(len(class_names))
-plt.xticks(tick_marks, class_names)
-plt.yticks(tick_marks, class_names)
-
-# Create heatmap and labels
-sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
-ax.xaxis.set_label_position("top")
-ax.set_ylim([0,2])
-plt.tight_layout()
-plt.title('Confusion matrix for Random Forest', y=1.1)
-plt.ylabel('Actual label')
-plt.xlabel('Predicted label')
-
-# print precision and recall values
-print(classification_report(pearsons_df_test_y, rf_pearsons_pred))
-
-# TPR/TNR rates
-print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
-      round(recall_score(pearsons_df_test_y, rf_pearsons_pred) * 100, 2),'%')
-print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
-    round(tn / (tn + fp) * 100, 2),'%')
-
-####
-# End rf pearsons prediction prints
-####
-
-####
-# Start rf ols prediction prints
-####
+    
+lgb.plot_importance(model, max_num_features=10, importance_type='split')
 
 # confusion matrix for random forest 8/8
-cm_one = confusion_matrix(ols_df_test_y, rf_ols_pred)
-tn, fp, fn, tp  = confusion_matrix(ols_df_test_y, \
-                                   rf_ols_pred).ravel()
-
-# Create confusion matrix heatmap
-# setup class names and tick marks
-class_names=[0,1]
-fig, ax = plt.subplots()
-tick_marks = np.arange(len(class_names))
-plt.xticks(tick_marks, class_names)
-plt.yticks(tick_marks, class_names)
-
-# Create heatmap and labels
-sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
-ax.xaxis.set_label_position("top")
-ax.set_ylim([0,2])
-plt.tight_layout()
-plt.title('Confusion matrix for Random Forest', y=1.1)
-plt.ylabel('Actual label')
-plt.xlabel('Predicted label')
-
-# print precision and recall values
-print(classification_report(ols_df_test_y, rf_ols_pred))
-
-# TPR/TNR rates
-print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
-      round(recall_score(ols_df_test_y, rf_ols_pred) * 100, 2),'%')
-print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
-    round(tn / (tn + fp) * 100, 2),'%')
-
-####
-# End rf ols prediction prints
-####
-
-####
-# Start rf rfe prediction prints
-####
-
-# confusion matrix for random forest 8/8
-cm_one = confusion_matrix(rfe_df_test_y, rf_rfe_pred)
-tn, fp, fn, tp  = confusion_matrix(rfe_df_test_y, \
-                                   rf_rfe_pred).ravel()
-
-# Create confusion matrix heatmap
-# setup class names and tick marks
-class_names=[0,1]
-fig, ax = plt.subplots()
-tick_marks = np.arange(len(class_names))
-plt.xticks(tick_marks, class_names)
-plt.yticks(tick_marks, class_names)
-
-# Create heatmap and labels
-sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
-ax.xaxis.set_label_position("top")
-ax.set_ylim([0,2])
-plt.tight_layout()
-plt.title('Confusion matrix for Random Forest', y=1.1)
-plt.ylabel('Actual label')
-plt.xlabel('Predicted label')
-
-# print precision and recall values
-print(classification_report(rfe_df_test_y, rf_rfe_pred))
-
-# TPR/TNR rates
-print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
-      round(recall_score(rfe_df_test_y, rf_rfe_pred) * 100, 2),'%')
-print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
-    round(tn / (tn + fp) * 100, 2),'%')
-
-####
-# End rf rfe prediction prints
-####
-
-####
-# Start rf lasso prediction prints
-####
-
-# confusion matrix for random forest 8/8
-cm_one = confusion_matrix(lasso_df_test_y, rf_lasso_pred)
-tn, fp, fn, tp  = confusion_matrix(lasso_df_test_y, \
-                                   rf_lasso_pred).ravel()
-
-# Create confusion matrix heatmap
-# setup class names and tick marks
-class_names=[0,1]
-fig, ax = plt.subplots()
-tick_marks = np.arange(len(class_names))
-plt.xticks(tick_marks, class_names)
-plt.yticks(tick_marks, class_names)
-
-# Create heatmap and labels
-sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
-ax.xaxis.set_label_position("top")
-ax.set_ylim([0,2])
-plt.tight_layout()
-plt.title('Confusion matrix for Random Forest', y=1.1)
-plt.ylabel('Actual label')
-plt.xlabel('Predicted label')
-
-# print precision and recall values
-print(classification_report(lasso_df_test_y, rf_lasso_pred))
-
-# TPR/TNR rates
-print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
-      round(recall_score(lasso_df_test_y, rf_lasso_pred) * 100, 2),'%')
-print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
-    round(tn / (tn + fp) * 100, 2),'%')
-
-####
-# End rf lasso prediction prints
-####
-
-####
-# Start rf lasso prediction prints
-####
-
-# confusion matrix for random forest 8/8
-cm_one = confusion_matrix(full_df_test_y, rf_full_pred)
-tn, fp, fn, tp  = confusion_matrix(full_df_test_y, \
-                                   rf_full_pred).ravel()
-
-# Create confusion matrix heatmap
-# setup class names and tick marks
-class_names=[0,1]
-fig, ax = plt.subplots()
-tick_marks = np.arange(len(class_names))
-plt.xticks(tick_marks, class_names)
-plt.yticks(tick_marks, class_names)
-
-# Create heatmap and labels
-sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
-ax.xaxis.set_label_position("top")
-ax.set_ylim([0,2])
-plt.tight_layout()
-plt.title('Confusion matrix for Random Forest', y=1.1)
-plt.ylabel('Actual label')
-plt.xlabel('Predicted label')
-
-# print precision and recall values
-print(classification_report(full_df_test_y, rf_full_pred))
-
-# TPR/TNR rates
-print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
-      round(recall_score(full_df_test_y, rf_full_pred) * 100, 2),'%')
-print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
-    round(tn / (tn + fp) * 100, 2),'%')
-
-####
-# End rf lasso prediction prints
-####
-
-####
-# Start knn pearsons prediction prints
-####
-
-# confusion matrix for random forest 8/8
-cm_one = confusion_matrix(pearsons_scaled_df_test_y, knn_pearsons_pred)
-tn, fp, fn, tp  = confusion_matrix(pearsons_scaled_df_test_y, \
-                                   knn_pearsons_pred).ravel()
+cm_one = confusion_matrix(main_scaled_df_test_y, model_pred_y_01)
+tn, fp, fn, tp  = confusion_matrix(main_scaled_df_test_y, \
+                                   model_pred_y_01).ravel()
 
 # Create confusion matrix heatmap
 # setup class names and tick marks
@@ -3570,16 +3536,56 @@ plt.ylabel('Actual label')
 plt.xlabel('Predicted label')
 
 # print precision and recall values
-print(classification_report(pearsons_scaled_df_test_y, knn_pearsons_pred))
+print(classification_report(main_scaled_df_test_y, model_pred_y_01))
 
 # TPR/TNR rates
 print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
-      round(recall_score(pearsons_scaled_df_test_y, knn_pearsons_pred) * 100, 2),'%')
+      round(recall_score(main_scaled_df_test_y, model_pred_y_01) * 100, 2),'%')
 print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
     round(tn / (tn + fp) * 100, 2),'%')
 
 ####
-# End knn pearsons prediction prints
+# End GMB prediction prints
+####
+    
+    
+####
+# Start rf ten prediction prints
+####
+
+# confusion matrix for random forest pearsons
+cm_one = confusion_matrix(ten_scaled_df_test_y, rf_ten_pred)
+tn, fp, fn, tp  = confusion_matrix(ten_scaled_df_test_y, \
+                                   rf_ten_pred).ravel()
+
+# Create confusion matrix heatmap
+# setup class names and tick marks
+class_names=[0,1]
+fig, ax = plt.subplots()
+tick_marks = np.arange(len(class_names))
+plt.xticks(tick_marks, class_names)
+plt.yticks(tick_marks, class_names)
+
+# Create heatmap and labels
+sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
+ax.xaxis.set_label_position("top")
+ax.set_ylim([0,2])
+plt.tight_layout()
+plt.title('Confusion matrix for Random Forest', y=1.1)
+plt.ylabel('Actual label')
+plt.xlabel('Predicted label')
+
+# print precision and recall values
+print(classification_report(ten_scaled_df_test_y, rf_ten_pred))
+
+# TPR/TNR rates
+print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
+      round(recall_score(ten_scaled_df_test_y, rf_ten_pred) * 100, 2),'%')
+print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
+    round(tn / (tn + fp) * 100, 2),'%')
+
+####
+# End rf ten prediction prints
 ####
 
 ####
@@ -3621,158 +3627,367 @@ print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
 # End knn ols prediction prints
 ####
 
-####
-# Start knn rfe prediction prints
-####
 
-# confusion matrix for random forest 8/8
-cm_one = confusion_matrix(rfe_scaled_df_test_y, knn_rfe_pred)
-tn, fp, fn, tp  = confusion_matrix(rfe_scaled_df_test_y, \
-                                   knn_rfe_pred).ravel()
 
-# Create confusion matrix heatmap
-# setup class names and tick marks
-class_names=[0,1]
-fig, ax = plt.subplots()
-tick_marks = np.arange(len(class_names))
-plt.xticks(tick_marks, class_names)
-plt.yticks(tick_marks, class_names)
 
-# Create heatmap and labels
-sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
-ax.xaxis.set_label_position("top")
-ax.set_ylim([0,2])
-plt.tight_layout()
-plt.title('Confusion matrix for KNN Pearsons', y=1.1)
-plt.ylabel('Actual label')
-plt.xlabel('Predicted label')
 
-# print precision and recall values
-print(classification_report(rfe_scaled_df_test_y, knn_rfe_pred))
 
-# TPR/TNR rates
-print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
-      round(recall_score(rfe_scaled_df_test_y, knn_rfe_pred) * 100, 2),'%')
-print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
-    round(tn / (tn + fp) * 100, 2),'%')
 
-####
-# End knn rfe prediction prints
-####
 
-####
-# Start knn lasso prediction prints
-####
 
-# confusion matrix for random forest 8/8
-cm_one = confusion_matrix(lasso_scaled_df_test_y, knn_lasso_pred)
-tn, fp, fn, tp  = confusion_matrix(lasso_scaled_df_test_y, \
-                                   knn_lasso_pred).ravel()
 
-# Create confusion matrix heatmap
-# setup class names and tick marks
-class_names=[0,1]
-fig, ax = plt.subplots()
-tick_marks = np.arange(len(class_names))
-plt.xticks(tick_marks, class_names)
-plt.yticks(tick_marks, class_names)
 
-# Create heatmap and labels
-sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
-ax.xaxis.set_label_position("top")
-ax.set_ylim([0,2])
-plt.tight_layout()
-plt.title('Confusion matrix for KNN Lasso', y=1.1)
-plt.ylabel('Actual label')
-plt.xlabel('Predicted label')
 
-# print precision and recall values
-print(classification_report(lasso_scaled_df_test_y, knn_lasso_pred))
 
-# TPR/TNR rates
-print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
-      round(recall_score(lasso_scaled_df_test_y, knn_lasso_pred) * 100, 2),'%')
-print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
-    round(tn / (tn + fp) * 100, 2),'%')
-
-####
-# End knn lasso prediction prints
-####
-
-####
-# Start knn ten prediction prints
-####
-
-# confusion matrix for random forest 8/8
-cm_one = confusion_matrix(ten_scaled_df_test_y, knn_ten_pred)
-tn, fp, fn, tp  = confusion_matrix(ten_scaled_df_test_y, \
-                                   knn_ten_pred).ravel()
-
-# Create confusion matrix heatmap
-# setup class names and tick marks
-class_names=[0,1]
-fig, ax = plt.subplots()
-tick_marks = np.arange(len(class_names))
-plt.xticks(tick_marks, class_names)
-plt.yticks(tick_marks, class_names)
-
-# Create heatmap and labels
-sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
-ax.xaxis.set_label_position("top")
-ax.set_ylim([0,2])
-plt.tight_layout()
-plt.title('Confusion matrix for KNN Ten', y=1.1)
-plt.ylabel('Actual label')
-plt.xlabel('Predicted label')
-
-# print precision and recall values
-print(classification_report(ten_scaled_df_test_y, knn_ten_pred))
-
-# TPR/TNR rates
-print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
-      round(recall_score(ten_scaled_df_test_y, knn_ten_pred) * 100, 2),'%')
-print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
-    round(tn / (tn + fp) * 100, 2),'%')
-
-####
-# End knn ten prediction prints
-####
-
-####
-# Start knn twenty prediction prints
-####
-
-# confusion matrix for random forest 8/8
-cm_one = confusion_matrix(twenty_scaled_df_test_y, knn_twenty_pred)
-tn, fp, fn, tp  = confusion_matrix(twenty_scaled_df_test_y, \
-                                   knn_twenty_pred).ravel()
-
-# Create confusion matrix heatmap
-# setup class names and tick marks
-class_names=[0,1]
-fig, ax = plt.subplots()
-tick_marks = np.arange(len(class_names))
-plt.xticks(tick_marks, class_names)
-plt.yticks(tick_marks, class_names)
-
-# Create heatmap and labels
-sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
-ax.xaxis.set_label_position("top")
-ax.set_ylim([0,2])
-plt.tight_layout()
-plt.title('Confusion matrix for KNN Ten', y=1.1)
-plt.ylabel('Actual label')
-plt.xlabel('Predicted label')
-
-# print precision and recall values
-print(classification_report(twenty_scaled_df_test_y, knn_twenty_pred))
-
-# TPR/TNR rates
-print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
-      round(recall_score(twenty_scaled_df_test_y, knn_twenty_pred) * 100, 2),'%')
-print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
-    round(tn / (tn + fp) * 100, 2),'%')
-
-####
-# End knn twenty prediction prints
-####
+#####
+## Start rf ols prediction prints
+#####
+#
+## confusion matrix for random forest 8/8
+#cm_one = confusion_matrix(ols_df_test_y, rf_ols_pred)
+#tn, fp, fn, tp  = confusion_matrix(ols_df_test_y, \
+#                                   rf_ols_pred).ravel()
+#
+## Create confusion matrix heatmap
+## setup class names and tick marks
+#class_names=[0,1]
+#fig, ax = plt.subplots()
+#tick_marks = np.arange(len(class_names))
+#plt.xticks(tick_marks, class_names)
+#plt.yticks(tick_marks, class_names)
+#
+## Create heatmap and labels
+#sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
+#ax.xaxis.set_label_position("top")
+#ax.set_ylim([0,2])
+#plt.tight_layout()
+#plt.title('Confusion matrix for Random Forest', y=1.1)
+#plt.ylabel('Actual label')
+#plt.xlabel('Predicted label')
+#
+## print precision and recall values
+#print(classification_report(ols_df_test_y, rf_ols_pred))
+#
+## TPR/TNR rates
+#print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
+#      round(recall_score(ols_df_test_y, rf_ols_pred) * 100, 2),'%')
+#print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
+#    round(tn / (tn + fp) * 100, 2),'%')
+#
+#####
+## End rf ols prediction prints
+#####
+#
+#####
+## Start rf rfe prediction prints
+#####
+#
+## confusion matrix for random forest 8/8
+#cm_one = confusion_matrix(rfe_df_test_y, rf_rfe_pred)
+#tn, fp, fn, tp  = confusion_matrix(rfe_df_test_y, \
+#                                   rf_rfe_pred).ravel()
+#
+## Create confusion matrix heatmap
+## setup class names and tick marks
+#class_names=[0,1]
+#fig, ax = plt.subplots()
+#tick_marks = np.arange(len(class_names))
+#plt.xticks(tick_marks, class_names)
+#plt.yticks(tick_marks, class_names)
+#
+## Create heatmap and labels
+#sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
+#ax.xaxis.set_label_position("top")
+#ax.set_ylim([0,2])
+#plt.tight_layout()
+#plt.title('Confusion matrix for Random Forest', y=1.1)
+#plt.ylabel('Actual label')
+#plt.xlabel('Predicted label')
+#
+## print precision and recall values
+#print(classification_report(rfe_df_test_y, rf_rfe_pred))
+#
+## TPR/TNR rates
+#print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
+#      round(recall_score(rfe_df_test_y, rf_rfe_pred) * 100, 2),'%')
+#print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
+#    round(tn / (tn + fp) * 100, 2),'%')
+#
+#####
+## End rf rfe prediction prints
+#####
+#
+#####
+## Start rf lasso prediction prints
+#####
+#
+## confusion matrix for random forest 8/8
+#cm_one = confusion_matrix(lasso_df_test_y, rf_lasso_pred)
+#tn, fp, fn, tp  = confusion_matrix(lasso_df_test_y, \
+#                                   rf_lasso_pred).ravel()
+#
+## Create confusion matrix heatmap
+## setup class names and tick marks
+#class_names=[0,1]
+#fig, ax = plt.subplots()
+#tick_marks = np.arange(len(class_names))
+#plt.xticks(tick_marks, class_names)
+#plt.yticks(tick_marks, class_names)
+#
+## Create heatmap and labels
+#sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
+#ax.xaxis.set_label_position("top")
+#ax.set_ylim([0,2])
+#plt.tight_layout()
+#plt.title('Confusion matrix for Random Forest', y=1.1)
+#plt.ylabel('Actual label')
+#plt.xlabel('Predicted label')
+#
+## print precision and recall values
+#print(classification_report(lasso_df_test_y, rf_lasso_pred))
+#
+## TPR/TNR rates
+#print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
+#      round(recall_score(lasso_df_test_y, rf_lasso_pred) * 100, 2),'%')
+#print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
+#    round(tn / (tn + fp) * 100, 2),'%')
+#
+#####
+## End rf lasso prediction prints
+#####
+#
+#####
+## Start rf lasso prediction prints
+#####
+#
+## confusion matrix for random forest 8/8
+#cm_one = confusion_matrix(full_df_test_y, rf_full_pred)
+#tn, fp, fn, tp  = confusion_matrix(full_df_test_y, \
+#                                   rf_full_pred).ravel()
+#
+## Create confusion matrix heatmap
+## setup class names and tick marks
+#class_names=[0,1]
+#fig, ax = plt.subplots()
+#tick_marks = np.arange(len(class_names))
+#plt.xticks(tick_marks, class_names)
+#plt.yticks(tick_marks, class_names)
+#
+## Create heatmap and labels
+#sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
+#ax.xaxis.set_label_position("top")
+#ax.set_ylim([0,2])
+#plt.tight_layout()
+#plt.title('Confusion matrix for Random Forest', y=1.1)
+#plt.ylabel('Actual label')
+#plt.xlabel('Predicted label')
+#
+## print precision and recall values
+#print(classification_report(full_df_test_y, rf_full_pred))
+#
+## TPR/TNR rates
+#print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
+#      round(recall_score(full_df_test_y, rf_full_pred) * 100, 2),'%')
+#print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
+#    round(tn / (tn + fp) * 100, 2),'%')
+#
+#####
+## End rf lasso prediction prints
+#####
+#
+#####
+## Start knn pearsons prediction prints
+#####
+#
+## confusion matrix for random forest 8/8
+#cm_one = confusion_matrix(pearsons_scaled_df_test_y, knn_pearsons_pred)
+#tn, fp, fn, tp  = confusion_matrix(pearsons_scaled_df_test_y, \
+#                                   knn_pearsons_pred).ravel()
+#
+## Create confusion matrix heatmap
+## setup class names and tick marks
+#class_names=[0,1]
+#fig, ax = plt.subplots()
+#tick_marks = np.arange(len(class_names))
+#plt.xticks(tick_marks, class_names)
+#plt.yticks(tick_marks, class_names)
+#
+## Create heatmap and labels
+#sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
+#ax.xaxis.set_label_position("top")
+#ax.set_ylim([0,2])
+#plt.tight_layout()
+#plt.title('Confusion matrix for KNN Pearsons', y=1.1)
+#plt.ylabel('Actual label')
+#plt.xlabel('Predicted label')
+#
+## print precision and recall values
+#print(classification_report(pearsons_scaled_df_test_y, knn_pearsons_pred))
+#
+## TPR/TNR rates
+#print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
+#      round(recall_score(pearsons_scaled_df_test_y, knn_pearsons_pred) * 100, 2),'%')
+#print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
+#    round(tn / (tn + fp) * 100, 2),'%')
+#
+#####
+## End knn pearsons prediction prints
+#####
+#
+#
+#
+#####
+## Start knn rfe prediction prints
+#####
+#
+## confusion matrix for random forest 8/8
+#cm_one = confusion_matrix(rfe_scaled_df_test_y, knn_rfe_pred)
+#tn, fp, fn, tp  = confusion_matrix(rfe_scaled_df_test_y, \
+#                                   knn_rfe_pred).ravel()
+#
+## Create confusion matrix heatmap
+## setup class names and tick marks
+#class_names=[0,1]
+#fig, ax = plt.subplots()
+#tick_marks = np.arange(len(class_names))
+#plt.xticks(tick_marks, class_names)
+#plt.yticks(tick_marks, class_names)
+#
+## Create heatmap and labels
+#sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
+#ax.xaxis.set_label_position("top")
+#ax.set_ylim([0,2])
+#plt.tight_layout()
+#plt.title('Confusion matrix for KNN Pearsons', y=1.1)
+#plt.ylabel('Actual label')
+#plt.xlabel('Predicted label')
+#
+## print precision and recall values
+#print(classification_report(rfe_scaled_df_test_y, knn_rfe_pred))
+#
+## TPR/TNR rates
+#print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
+#      round(recall_score(rfe_scaled_df_test_y, knn_rfe_pred) * 100, 2),'%')
+#print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
+#    round(tn / (tn + fp) * 100, 2),'%')
+#
+#####
+## End knn rfe prediction prints
+#####
+#
+#####
+## Start knn lasso prediction prints
+#####
+#
+## confusion matrix for random forest 8/8
+#cm_one = confusion_matrix(lasso_scaled_df_test_y, knn_lasso_pred)
+#tn, fp, fn, tp  = confusion_matrix(lasso_scaled_df_test_y, \
+#                                   knn_lasso_pred).ravel()
+#
+## Create confusion matrix heatmap
+## setup class names and tick marks
+#class_names=[0,1]
+#fig, ax = plt.subplots()
+#tick_marks = np.arange(len(class_names))
+#plt.xticks(tick_marks, class_names)
+#plt.yticks(tick_marks, class_names)
+#
+## Create heatmap and labels
+#sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
+#ax.xaxis.set_label_position("top")
+#ax.set_ylim([0,2])
+#plt.tight_layout()
+#plt.title('Confusion matrix for KNN Lasso', y=1.1)
+#plt.ylabel('Actual label')
+#plt.xlabel('Predicted label')
+#
+## print precision and recall values
+#print(classification_report(lasso_scaled_df_test_y, knn_lasso_pred))
+#
+## TPR/TNR rates
+#print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
+#      round(recall_score(lasso_scaled_df_test_y, knn_lasso_pred) * 100, 2),'%')
+#print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
+#    round(tn / (tn + fp) * 100, 2),'%')
+#
+#####
+## End knn lasso prediction prints
+#####
+#
+#####
+## Start knn ten prediction prints
+#####
+#
+## confusion matrix for random forest 8/8
+#cm_one = confusion_matrix(ten_scaled_df_test_y, knn_ten_pred)
+#tn, fp, fn, tp  = confusion_matrix(ten_scaled_df_test_y, \
+#                                   knn_ten_pred).ravel()
+#
+## Create confusion matrix heatmap
+## setup class names and tick marks
+#class_names=[0,1]
+#fig, ax = plt.subplots()
+#tick_marks = np.arange(len(class_names))
+#plt.xticks(tick_marks, class_names)
+#plt.yticks(tick_marks, class_names)
+#
+## Create heatmap and labels
+#sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
+#ax.xaxis.set_label_position("top")
+#ax.set_ylim([0,2])
+#plt.tight_layout()
+#plt.title('Confusion matrix for KNN Ten', y=1.1)
+#plt.ylabel('Actual label')
+#plt.xlabel('Predicted label')
+#
+## print precision and recall values
+#print(classification_report(ten_scaled_df_test_y, knn_ten_pred))
+#
+## TPR/TNR rates
+#print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
+#      round(recall_score(ten_scaled_df_test_y, knn_ten_pred) * 100, 2),'%')
+#print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
+#    round(tn / (tn + fp) * 100, 2),'%')
+#
+#####
+## End knn ten prediction prints
+#####
+#
+#####
+## Start knn twenty prediction prints
+#####
+#
+## confusion matrix for random forest 8/8
+#cm_one = confusion_matrix(twenty_scaled_df_test_y, knn_twenty_pred)
+#tn, fp, fn, tp  = confusion_matrix(twenty_scaled_df_test_y, \
+#                                   knn_twenty_pred).ravel()
+#
+## Create confusion matrix heatmap
+## setup class names and tick marks
+#class_names=[0,1]
+#fig, ax = plt.subplots()
+#tick_marks = np.arange(len(class_names))
+#plt.xticks(tick_marks, class_names)
+#plt.yticks(tick_marks, class_names)
+#
+## Create heatmap and labels
+#sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
+#ax.xaxis.set_label_position("top")
+#ax.set_ylim([0,2])
+#plt.tight_layout()
+#plt.title('Confusion matrix for KNN Ten', y=1.1)
+#plt.ylabel('Actual label')
+#plt.xlabel('Predicted label')
+#
+## print precision and recall values
+#print(classification_report(twenty_scaled_df_test_y, knn_twenty_pred))
+#
+## TPR/TNR rates
+#print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
+#      round(recall_score(twenty_scaled_df_test_y, knn_twenty_pred) * 100, 2),'%')
+#print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
+#    round(tn / (tn + fp) * 100, 2),'%')
+#
+#####
+## End knn twenty prediction prints
+#####
