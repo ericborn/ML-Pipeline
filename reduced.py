@@ -361,6 +361,60 @@ advanced_params = {
     'nthread': 6,
 }
 
+test_params = {
+    'boosting_type': 'gbdt',
+    'objective': 'binary',
+    'metric': 'auc',
+    
+    'learning_rate': 0.01,
+    # more leaves increases accuracy, but may lead to overfitting
+    'num_leaves': 60,
+    
+    # the maximum tree depth. Shallower trees reduce overfitting.
+    'max_depth': 5,
+
+    # minimal loss gain to perform a split
+    'min_split_gain': 0,
+
+    # or min_data_in_leaf: specifies the minimum samples per leaf node.
+    'min_child_samples': 15,
+
+    # minimal sum hessian in one leaf. Controls overfitting.
+    'min_child_weight': 5,
+
+    # L1 and L2 regularization
+    'lambda_l1': 0.1, 
+    'lambda_l2': 0.1,
+    
+    # randomly select a fraction of the features before building each tree.
+    'feature_fraction': 0.7, 
+    
+    # Speeds up training and controls overfitting.
+    # allows for bagging or subsampling of data to speed up training.
+    'bagging_fraction': 0.5,
+    
+    # perform bagging on every Kth iteration, disabled if 0.
+    'bagging_freq': 0,
+    
+    # add a weight to the positive class examples (compensates for imbalance).
+    'scale_pos_weight': 120, 
+    
+    # amount of data to sample to determine histogram bins
+    'subsample_for_bin': 200000,
+    
+    # the maximum number of bins to bucket feature values in.
+    # LightGBM autocompresses memory based on this value. 
+    # Larger bins improves accuracy.
+    'max_bin': 500, 
+    
+    # set state for repeatability
+    'random_state' : [1337],
+    
+    # number of threads to use for LightGBM, 
+    # best set to number of actual cores.
+    'nthread': 6,
+}
+
 # create a gradient boosted decision tree using LGBM
 # boost_rounds = number of iterations
 # stop training if none of the metrics improves on any validation data
@@ -401,11 +455,21 @@ model, evals = train_gbm(advanced_params, lgb_train, lgb_test, \
 # predicted value of y
 model_pred_y = model.predict(main_scaled_df_test_x)
 
-# converts all predictions to 1 if > 0.5 otherwise 0
-model_pred_y_01 = np.where(model_pred_y > 0.5, 1, 0)
-
+# store the true and prodicted values
 model_test_results = pd.DataFrame({'trueValue': main_scaled_df_test_y, \
                                    'predictedValue': model_pred_y})
+
+# find median values for churn and no churn predction
+# -1.299 and -1.390
+median_no_churn = np.median(1/np.log(model_test_results.predictedValue[model_test_results.trueValue == 0]))
+median_churn = np.median(1/np.log(model_test_results.predictedValue[model_test_results.trueValue == 1]))
+
+# converts all predictions to 1 if < median_no_churn value otherwise 0
+model_pred_y_mnc = np.where(model_test_results.y_transformed \
+                                   < median_no_churn, 1, 0)
+# same but median_churn value
+model_pred_y_mc = np.where(model_test_results.y_transformed \
+                                   < median_churn, 1, 0)
 
 # store accuracy
 global_accuracy.append(100-(round(np.mean(model_pred_y
@@ -455,11 +519,6 @@ plt.show()
 optimal_index = np.argmax(recall - false_positive_rate)
 optimal_threshhold = thresholds[optimal_index]
 
-# find median values for churn and no churn predction
-# -1.299 and -1.390
-median_no_churn = np.median(1/np.log(model_test_results.predictedValue[model_test_results.trueValue == 0]))
-median_churn = np.median(1/np.log(model_test_results.predictedValue[model_test_results.trueValue == 1]))
-
 # transform results from predicted value
 model_test_results['y_transformed'] = 1/np.log(model_test_results['predictedValue'])
 
@@ -489,10 +548,34 @@ def plot_roc_curve(test_res, threshold = -1.39):
     _ = plt.plot(fpr, tpr, 'r')
     __ = plt.plot(_fpr_, _tpr_, 'b', ls = '--')
 
-plot_roc_curve(model_test_results)
+# plot roc with both median adjustments
+plot_roc_curve(model_test_results, median_churn)
+plot_roc_curve(model_test_results, median_no_churn)
 
-print('AUC score:', roc_auc)
 
+def plot_conf_mat(cm):
+    """
+    Helper function to plot confusion matrix.
+    With text centerred.
+    """
+    plt.figure(figsize=(8,8))
+    ax = sns.heatmap(cm, annot=True,fmt="d",annot_kws={"size": 16})
+    bottom, top = ax.get_ylim()
+    ax.set_ylim(bottom + 0.5, top - 0.5)
+    
+# setup confusion matrix with adjusted churn values
+cm_auc = confusion_matrix(model_test_results.trueValue, \
+                          np.where(model_test_results.y_transformed \
+                                   < median_churn, 1, 0), labels=[0, 1])    
+  
+# setup confusion matrix with adjusted no churn values
+cm_bus = confusion_matrix(model_test_results.trueValue, \
+                          np.where(model_test_results.y_transformed \
+                                   < median_no_churn, 1, 0), labels=[0, 1])  
+
+# plot confusion matrix's with adjusted values  
+plot_conf_mat(cm_auc)
+plot_conf_mat(cm_bus)
 
 ####
 # End building 1
@@ -508,20 +591,30 @@ model2, evals2 = train_gbm(advanced_params, lgb_train, lgb_test, \
 # predicted value of y
 model_pred_y2 = model2.predict(main_scaled_df_test_x)
 
-# converts all predictions to 1 if > 0.5 otherwise 0
-model_pred_y2_01 = np.where(model_pred_y2 > 0.5, 1, 0)
-
 # save model to txt file
 #model.save_model('cell_churn.txt')
 
+# store the true and prodicted values
 model_test_results2 = pd.DataFrame({'trueValue': main_scaled_df_test_y, \
                                    'predictedValue': model_pred_y2})
 
+# find median values for churn and no churn predction
+# -1.299 and -1.390
+median_no_churn2 = np.median(1/np.log(model_test_results2.predictedValue[model_test_results2.trueValue == 0]))
+median_churn2 = np.median(1/np.log(model_test_results2.predictedValue[model_test_results2.trueValue == 1]))
+
+# converts all predictions to 1 if < median_no_churn value otherwise 0
+model_pred_y_mnc2 = np.where(model_test_results2.y_transformed \
+                                   < median_no_churn2, 1, 0)
+# same but median_churn value
+model_pred_y_mc2 = np.where(model_test_results2.y_transformed \
+                                   < median_churn2, 1, 0)
+ 
 # store accuracy
 global_accuracy.append(100-(round(np.mean(model_pred_y2
                                   != main_scaled_df_test_y),2)))
-    
 
+# store roc score
 roc_scores.update({'GBM2': roc_auc_score(model_test_results2.trueValue, \
                                 model_test_results2.predictedValue)})
 
@@ -562,112 +655,42 @@ plt.show()
 # End building 2
 ####
 
-###########
-# Start gbm with grid search
-###########
+####
+# Start building 3
+####
+# build another advanced model based on the first model
+model3, evals3 = train_gbm(test_params, lgb_train, lgb_test, \
+                           boost_rounds = 1000)
 
-#Select Hyper-Parameters
-params = {    
-        'boosting_type': 'gbdt',
-        'objective': 'binary',
-        'metric': 'auc',
-        'learning_rate': 0.01,
-        'num_leaves': 41,
-        'max_depth': 5,
-        'min_split_gain': 0,
-        'min_child_samples': 21,
-        'min_child_weight': 5,
-        'lambda_l1': 0.5, 
-        'lambda_l2': 0.5,
-        'feature_fraction': 0.5, 
-        'bagging_fraction': 0.5,
-        'bagging_freq': 0,
-        'scale_pos_weight': 140, 
-        'subsample_for_bin': 200000,
-        'max_bin': 1000, 
-        'random_state' : [1337],
-        'nthread': 6,
-          }
+# predicted value of y
+model_pred_y3 = model3.predict(main_scaled_df_test_x)
 
-# Create parameters to search
-gridParams = {
-    'learning_rate': [0.01, 0.025, 0.05],
-    'num_leaves': [20, 40, 60],
-    'min_child_samples': [15, 21, 26],
-    'min_child_weight': [5, 10, 15],
-    'lambda_l1': [0.1, 0.5, 1],
-    'lambda_l2': [0.1, 0.5, 1],
-    'scale_pos_weight': [120, 140, 160],
-    'feature_fraction': [0.1, 0.5, 0.7],
-    'max_bin': [500, 1000, 1500],
-    }
+# converts all predictions to 1 if > 0.5 otherwise 0
+model_pred_y3_01 = np.where(model_pred_y3 > 0.5, 1, 0)
 
-# Create classifier to use
-mdl = lgb.LGBMClassifier(
-          boosting_type= 'gbdt',
-          objective = 'binary',
-          silent = True,
-          learning_rate = params['learning_rate'],
-          num_leaves = params['num_leaves'],
-          min_child_samples = params['min_child_samples'],
-          min_child_weight = params['min_child_weight'],
-          lambda_l1 = params['lambda_l1'],
-          lambda_l2 = params['lambda_l2'],
-          scale_pos_weight = params['scale_pos_weight'],
-          feature_fraction = params['feature_fraction'],
-          max_bin = params['max_bin'])
-
-# View the default model params:
-mdl.get_params().keys()
-
-# Create the grid
-grid = GridSearchCV(mdl, gridParams, verbose=2, cv=4, n_jobs=-1)
-
-# Run the grid
-grid.fit(main_scaled_df_train_x, main_scaled_df_train_y)
-
-# Print the best parameters found
-print(grid.best_params_)
-print(grid.best_score_)
-
-# Using parameters already set above, replace in the best from the grid search
-params['colsample_bytree'] = grid.best_params_['colsample_bytree']
-params['learning_rate'] = grid.best_params_['learning_rate']
-params['n_estimators'] = grid.best_params_['n_estimators']
-params['num_leaves'] = grid.best_params_['num_leaves']
-params['subsample'] = grid.best_params_['subsample']
-
-#Train model on selected parameters and number of iterations
-grid_lgbm = lgb.train(params, lgb_train,
-                 init_model = None,
-                 early_stopping_rounds = 0,
-                 valid_sets = lgb_test,
-                 verbose_eval = False)
-
-#Predict on test set
-predictions_lgbm_prob = grid_lgbm.predict(main_scaled_df_test_x)
-predictions_lgbm_01 = np.where(predictions_lgbm_prob > 0.5, 1, 0) #Turn probability to 0-1 binary output
+# save model to txt file
+#model.save_model('cell_churn.txt')
 
 model_test_results3 = pd.DataFrame({'trueValue': main_scaled_df_test_y, \
-                                   'predictedValue': predictions_lgbm_prob})
+                                   'predictedValue': model_pred_y3})
 
 # store accuracy
-global_accuracy.append(100-(round(np.mean(predictions_lgbm_prob
+global_accuracy.append(100-(round(np.mean(model_pred_y3
                                   != main_scaled_df_test_y),2)))
     
 
-roc_scores.update({'GBM3': roc_auc_score(model_test_results3.trueValue, \
+roc_scores.update({'GBM2': roc_auc_score(model_test_results3.trueValue, \
                                 model_test_results3.predictedValue)})
 
 # setup plots
 #Print accuracy
-acc_lgbm = accuracy_score(main_scaled_df_test_y, predictions_lgbm_01)
+acc_lgbm = accuracy_score(main_scaled_df_test_y, model_pred_y3_01)
 print('Overall accuracy of Light GBM model:', acc_lgbm)
 
 #Print Area Under Curve
 plt.figure()
 false_positive_rate, recall, thresholds = roc_curve(main_scaled_df_test_y, 
-                                                    predictions_lgbm_01)
+                                                    model_pred_y3)
 roc_auc = auc(false_positive_rate, recall)
 plt.title('Receiver Operating Characteristic (ROC)')
 plt.plot(false_positive_rate, recall, 'b', label = 'AUC = %0.3f' %roc_auc)
@@ -683,7 +706,7 @@ print('AUC score:', roc_auc)
 
 #Print Confusion Matrix
 plt.figure()
-cm = confusion_matrix(main_scaled_df_test_y, predictions_lgbm_01)
+cm = confusion_matrix(main_scaled_df_test_y, model_pred_y3_01)
 labels = ['No Churn', 'Churn']
 plt.figure(figsize=(8,6))
 sns.heatmap(cm, xticklabels = labels, yticklabels = labels, annot = True, \
@@ -692,10 +715,146 @@ plt.title('Confusion Matrix')
 plt.ylabel('True Class')
 plt.xlabel('Predicted Class')
 plt.show()
+####
+# End building 3
+####
 
-############
-## End building gbm model
-############
+auc_based = 
+
+###########
+# Start gbm with grid search
+###########
+
+##Select Hyper-Parameters
+#params = {    
+#        'boosting_type': 'gbdt',
+#        'objective': 'binary',
+#        'metric': 'auc',
+#        'learning_rate': 0.01,
+#        'num_leaves': 41,
+#        'max_depth': 5,
+#        'min_split_gain': 0,
+#        'min_child_samples': 21,
+#        'min_child_weight': 5,
+#        'lambda_l1': 0.5, 
+#        'lambda_l2': 0.5,
+#        'feature_fraction': 0.5, 
+#        'bagging_fraction': 0.5,
+#        'bagging_freq': 0,
+#        'scale_pos_weight': 140, 
+#        'subsample_for_bin': 200000,
+#        'max_bin': 1000, 
+#        'random_state' : [1337],
+#        'nthread': 6,
+#          }
+#
+## Create parameters to search
+#gridParams = {
+#    'learning_rate': [0.01, 0.025, 0.05],
+#    'num_leaves': [20, 40, 60],
+#    'min_child_samples': [15, 21, 26],
+#    'min_child_weight': [5, 10, 15],
+#    'lambda_l1': [0.1, 0.5, 1],
+#    'lambda_l2': [0.1, 0.5, 1],
+#    'scale_pos_weight': [120, 140, 160],
+#    'feature_fraction': [0.1, 0.5, 0.7],
+#    'max_bin': [500, 1000, 1500],
+#    }
+#
+## Create classifier to use
+#mdl = lgb.LGBMClassifier(
+#          boosting_type= 'gbdt',
+#          objective = 'binary',
+#          silent = True,
+#          learning_rate = params['learning_rate'],
+#          num_leaves = params['num_leaves'],
+#          min_child_samples = params['min_child_samples'],
+#          min_child_weight = params['min_child_weight'],
+#          lambda_l1 = params['lambda_l1'],
+#          lambda_l2 = params['lambda_l2'],
+#          scale_pos_weight = params['scale_pos_weight'],
+#          feature_fraction = params['feature_fraction'],
+#          max_bin = params['max_bin'])
+#
+## View the default model params:
+#mdl.get_params().keys()
+#
+## Create the grid
+#grid = GridSearchCV(mdl, gridParams, verbose=2, cv=4, n_jobs=-1)
+#
+## Run the grid
+#grid.fit(main_scaled_df_train_x, main_scaled_df_train_y)
+#
+## Print the best parameters found
+#print(grid.best_params_)
+#print(grid.best_score_)
+#
+## Using parameters already set above, replace in the best from the grid search
+#params['colsample_bytree'] = grid.best_params_['colsample_bytree']
+#params['learning_rate'] = grid.best_params_['learning_rate']
+#params['n_estimators'] = grid.best_params_['n_estimators']
+#params['num_leaves'] = grid.best_params_['num_leaves']
+#params['subsample'] = grid.best_params_['subsample']
+#
+##Train model on selected parameters and number of iterations
+#grid_lgbm = lgb.train(params, lgb_train,
+#                 init_model = None,
+#                 early_stopping_rounds = 0,
+#                 valid_sets = lgb_test,
+#                 verbose_eval = False)
+#
+##Predict on test set
+#predictions_lgbm_prob = grid_lgbm.predict(main_scaled_df_test_x)
+#predictions_lgbm_01 = np.where(predictions_lgbm_prob > 0.5, 1, 0) #Turn probability to 0-1 binary output
+#
+#model_test_results3 = pd.DataFrame({'trueValue': main_scaled_df_test_y, \
+#                                   'predictedValue': predictions_lgbm_prob})
+#
+## store accuracy
+#global_accuracy.append(100-(round(np.mean(predictions_lgbm_prob
+#                                  != main_scaled_df_test_y),2)))
+#    
+#
+#roc_scores.update({'GBM3': roc_auc_score(model_test_results3.trueValue, \
+#                                model_test_results3.predictedValue)})
+#
+## setup plots
+##Print accuracy
+#acc_lgbm = accuracy_score(main_scaled_df_test_y, predictions_lgbm_01)
+#print('Overall accuracy of Light GBM model:', acc_lgbm)
+#
+##Print Area Under Curve
+#plt.figure()
+#false_positive_rate, recall, thresholds = roc_curve(main_scaled_df_test_y, 
+#                                                    predictions_lgbm_01)
+#roc_auc = auc(false_positive_rate, recall)
+#plt.title('Receiver Operating Characteristic (ROC)')
+#plt.plot(false_positive_rate, recall, 'b', label = 'AUC = %0.3f' %roc_auc)
+#plt.legend(loc='lower right')
+#plt.plot([0,1], [0,1], 'r--')
+#plt.xlim([0.0,1.0])
+#plt.ylim([0.0,1.0])
+#plt.ylabel('Recall')
+#plt.xlabel('Fall-out (1-Specificity)')
+#plt.show()
+#
+#print('AUC score:', roc_auc)
+#
+##Print Confusion Matrix
+#plt.figure()
+#cm = confusion_matrix(main_scaled_df_test_y, predictions_lgbm_01)
+#labels = ['No Churn', 'Churn']
+#plt.figure(figsize=(8,6))
+#sns.heatmap(cm, xticklabels = labels, yticklabels = labels, annot = True, \
+#            fmt='d', cmap="Blues", vmin = 0.2);
+#plt.title('Confusion Matrix')
+#plt.ylabel('True Class')
+#plt.xlabel('Predicted Class')
+#plt.show()
+#
+#############
+### End building gbm model
+#############
 
 ####
 # setup some plots
