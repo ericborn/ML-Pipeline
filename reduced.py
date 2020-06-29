@@ -64,7 +64,7 @@ timings_list.append(['Data clean up duration:', time.time()])
 
 # setup input directory and filename
 data = 'celldata'
-input_dir = r'C:\Users\Eric\Documents\GitHub\ML-Pipeline'
+input_dir = r'C:\Code projects\git projects\ML-Pipeline'
 csv_file = os.path.join(input_dir, data + '.csv')
 
 # read csv file into dataframe
@@ -77,7 +77,7 @@ except Exception as e:
     exit('Failed to read data from: '+ str(data)+'.csv')
 
 # describe the total rows and columns
-print('The total length of the dataframe is', main_df.shape[0], 'rows',
+print('The total length of the dataframe is', main_df.shape[0], 'rows'8
       'and the width is', main_df.shape[1], 'columns')
 
 # calculate the percentage of churn
