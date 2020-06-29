@@ -64,7 +64,7 @@ timings_list.append(['Data clean up duration:', time.time()])
 
 # setup input directory and filename
 data = 'celldata'
-input_dir = r'C:\Code projects\git projects\ML-Pipeline'
+input_dir = r'C:\Users\Eric\Documents\GitHub\ML-Pipeline'
 csv_file = os.path.join(input_dir, data + '.csv')
 
 # read csv file into dataframe
@@ -314,7 +314,7 @@ advanced_params = {
     
     'learning_rate': 0.01,
     # more leaves increases accuracy, but may lead to overfitting
-    'num_leaves': 41,
+    'num_leaves': 75,
     
     # the maximum tree depth. Shallower trees reduce overfitting.
     'max_depth': 5,
@@ -351,7 +351,7 @@ advanced_params = {
     # the maximum number of bins to bucket feature values in.
     # LightGBM autocompresses memory based on this value. 
     # Larger bins improves accuracy.
-    'max_bin': 1000, 
+    'max_bin': 1250, 
     
     # set state for repeatability
     'random_state' : [1337],
@@ -443,13 +443,56 @@ print('AUC score:', roc_auc)
 plt.figure()
 cm = confusion_matrix(main_scaled_df_test_y, model_pred_y_01)
 labels = ['No Churn', 'Churn']
-plt.figure(figsize=(8,6))
+plt.figure(figsize=(8,8))
 sns.heatmap(cm, xticklabels = labels, yticklabels = labels, annot = True, \
             fmt='d', cmap="Blues", vmin = 0.2);
 plt.title('Confusion Matrix')
 plt.ylabel('True Class')
 plt.xlabel('Predicted Class')
 plt.show()
+
+############
+optimal_index = np.argmax(recall - false_positive_rate)
+optimal_threshhold = thresholds[optimal_index]
+
+# find median values for churn and no churn predction
+# -1.299 and -1.390
+median_no_churn = np.median(1/np.log(model_test_results.predictedValue[model_test_results.trueValue == 0]))
+median_churn = np.median(1/np.log(model_test_results.predictedValue[model_test_results.trueValue == 1]))
+
+# transform results from predicted value
+model_test_results['y_transformed'] = 1/np.log(model_test_results['predictedValue'])
+
+################
+plt.figure(figsize=(8,8))
+plt.grid(True)
+sns.distplot(1/np.log(model_test_results.predictedValue[model_test_results.trueValue == 0]), color = 'green')
+sns.distplot(1/np.log(model_test_results.predictedValue[model_test_results.trueValue == 1]), color = 'red')
+plt.plot([median_no_churn, median_no_churn], [0, 2.4], 'bo--', linewidth=2.5)
+plt.plot([median_churn, median_churn], [0, 2.4], 'go--', linewidth=2.5)
+################
+
+#Print Area Under Curve
+def plot_roc_curve(test_res, threshold = -1.39):
+    ns_probs = [0 for _ in range(len(test_res))]
+    fpr, tpr, threshold = roc_curve(model_test_results.trueValue, 
+                                    np.where(model_test_results.y_transformed \
+                                             < threshold, 1, 0))
+    _fpr_, _tpr_, _threshold_ = roc_curve(model_test_results.trueValue, \
+                                          ns_probs)
+    roc_auc = auc(fpr, tpr)
+    plt.figure(figsize=(10,10))
+    plt.grid(True)
+    plt.title('ROC Curve. Area Under Curve: {:.3f}'.format(roc_auc))
+    plt.ylabel('True Positive Rate')
+    plt.xlabel('False Positive Rate')
+    _ = plt.plot(fpr, tpr, 'r')
+    __ = plt.plot(_fpr_, _tpr_, 'b', ls = '--')
+
+plot_roc_curve(model_test_results)
+
+print('AUC score:', roc_auc)
+
 
 ####
 # End building 1
