@@ -471,6 +471,27 @@ model_pred_y_mnc = np.where(model_test_results.y_transformed \
 model_pred_y_mc = np.where(model_test_results.y_transformed \
                                    < median_churn, 1, 0)
 
+# transform results from predicted value
+model_test_results['y_transformed'] = 1/np.log(model_test_results['predictedValue'])
+
+# find the customers within area under curve
+auc_based = model_test_results[model_test_results.y_transformed <= median_no_churn]
+
+# print customers AUC
+auc_based.trueValue.value_counts()
+
+# 9k customers, 36% possible to churn
+auc_based.trueValue.value_counts()/auc_based.shape[0]
+
+# find the customers within area under curve
+bus_based = model_test_results[model_test_results.y_transformed <= median_churn]
+
+# print customers AUC
+bus_based.trueValue.value_counts()
+
+# 6k customers, 40.1% possible to churn
+bus_based.trueValue.value_counts()/bus_based.shape[0]
+
 # store accuracy
 global_accuracy.append(100-(round(np.mean(model_pred_y
                                   != main_scaled_df_test_y),2)))
@@ -483,7 +504,7 @@ roc_scores.update({'GBM1': roc_auc_score(model_test_results.trueValue, \
 # setup plots
     
 #Print accuracy
-acc_lgbm = accuracy_score(main_scaled_df_test_y, model_pred_y_01)
+acc_lgbm = accuracy_score(main_scaled_df_test_y, model_pred_y_mc)
 print('Overall accuracy of Light GBM model:', acc_lgbm)
 
 #Print Area Under Curve
@@ -505,7 +526,7 @@ print('AUC score:', roc_auc)
 
 #Print Confusion Matrix
 plt.figure()
-cm = confusion_matrix(main_scaled_df_test_y, model_pred_y_01)
+cm = confusion_matrix(main_scaled_df_test_y, model_pred_y_mc)
 labels = ['No Churn', 'Churn']
 plt.figure(figsize=(8,8))
 sns.heatmap(cm, xticklabels = labels, yticklabels = labels, annot = True, \
@@ -518,9 +539,6 @@ plt.show()
 ############
 optimal_index = np.argmax(recall - false_positive_rate)
 optimal_threshhold = thresholds[optimal_index]
-
-# transform results from predicted value
-model_test_results['y_transformed'] = 1/np.log(model_test_results['predictedValue'])
 
 ################
 plt.figure(figsize=(8,8))
@@ -609,6 +627,11 @@ model_pred_y_mnc2 = np.where(model_test_results2.y_transformed \
 # same but median_churn value
 model_pred_y_mc2 = np.where(model_test_results2.y_transformed \
                                    < median_churn2, 1, 0)
+
+# transform results from predicted value
+model_test_results2['y_transformed'] = 1/np.log(\
+                                        model_test_results2['predictedValue'])
+
  
 # store accuracy
 global_accuracy.append(100-(round(np.mean(model_pred_y2
@@ -620,7 +643,7 @@ roc_scores.update({'GBM2': roc_auc_score(model_test_results2.trueValue, \
 
 # setup plots
 #Print accuracy
-acc_lgbm = accuracy_score(main_scaled_df_test_y, model_pred_y2_01)
+acc_lgbm = accuracy_score(main_scaled_df_test_y, model_pred_y_mc2)
 print('Overall accuracy of Light GBM model:', acc_lgbm)
 
 #Print Area Under Curve
@@ -642,7 +665,7 @@ print('AUC score:', roc_auc)
 
 #Print Confusion Matrix
 plt.figure()
-cm = confusion_matrix(main_scaled_df_test_y, model_pred_y2_01)
+cm = confusion_matrix(main_scaled_df_test_y, model_pred_y_mc2)
 labels = ['No Churn', 'Churn']
 plt.figure(figsize=(8,6))
 sns.heatmap(cm, xticklabels = labels, yticklabels = labels, annot = True, \
@@ -718,8 +741,6 @@ plt.show()
 ####
 # End building 3
 ####
-
-auc_based = 
 
 ###########
 # Start gbm with grid search
