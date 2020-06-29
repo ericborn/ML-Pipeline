@@ -34,7 +34,7 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.linear_model import LassoCV, LogisticRegression, LinearRegression
 from sklearn.metrics import confusion_matrix, recall_score, roc_curve, auc,\
                             classification_report, roc_auc_score, \
@@ -343,7 +343,7 @@ advanced_params = {
     'bagging_freq': 0,
     
     # add a weight to the positive class examples (compensates for imbalance).
-    'scale_pos_weight': 99, 
+    'scale_pos_weight': 140, 
     
     # amount of data to sample to determine histogram bins
     'subsample_for_bin': 200000,
@@ -353,6 +353,8 @@ advanced_params = {
     # Larger bins improves accuracy.
     'max_bin': 1000, 
     
+    # set state for repeatability
+    'random_state' : [1337],
     
     # number of threads to use for LightGBM, 
     # best set to number of actual cores.
@@ -388,10 +390,9 @@ def train_gbm(params, training_set, testing_set, init_gbm=None,
     
     return gbm, evals_result
 
-
-
-# build the core parameters model
-#model, evals = train_gbm(core_params, lgb_train, lgb_test)
+####
+# Start building 1
+####
 
 # build the advanced parameters model
 model, evals = train_gbm(advanced_params, lgb_train, lgb_test, \
@@ -450,7 +451,13 @@ plt.ylabel('True Class')
 plt.xlabel('Predicted Class')
 plt.show()
 
-##########
+####
+# End building 1
+####
+
+####
+# Start building 2
+####
 # build another advanced model based on the first model
 model2, evals2 = train_gbm(advanced_params, lgb_train, lgb_test, \
                          init_gbm=model, boost_rounds = 1000)
@@ -500,6 +507,140 @@ print('AUC score:', roc_auc)
 #Print Confusion Matrix
 plt.figure()
 cm = confusion_matrix(main_scaled_df_test_y, model_pred_y2_01)
+labels = ['No Churn', 'Churn']
+plt.figure(figsize=(8,6))
+sns.heatmap(cm, xticklabels = labels, yticklabels = labels, annot = True, \
+            fmt='d', cmap="Blues", vmin = 0.2);
+plt.title('Confusion Matrix')
+plt.ylabel('True Class')
+plt.xlabel('Predicted Class')
+plt.show()
+####
+# End building 2
+####
+
+###########
+# Start gbm with grid search
+###########
+
+#Select Hyper-Parameters
+params = {    
+        'boosting_type': 'gbdt',
+        'objective': 'binary',
+        'metric': 'auc',
+        'learning_rate': 0.01,
+        'num_leaves': 41,
+        'max_depth': 5,
+        'min_split_gain': 0,
+        'min_child_samples': 21,
+        'min_child_weight': 5,
+        'lambda_l1': 0.5, 
+        'lambda_l2': 0.5,
+        'feature_fraction': 0.5, 
+        'bagging_fraction': 0.5,
+        'bagging_freq': 0,
+        'scale_pos_weight': 140, 
+        'subsample_for_bin': 200000,
+        'max_bin': 1000, 
+        'random_state' : [1337],
+        'nthread': 6,
+          }
+
+# Create parameters to search
+gridParams = {
+    'learning_rate': [0.01, 0.025, 0.05],
+    'num_leaves': [20, 40, 60],
+    'min_child_samples': [15, 21, 26],
+    'min_child_weight': [5, 10, 15],
+    'lambda_l1': [0.1, 0.5, 1],
+    'lambda_l2': [0.1, 0.5, 1],
+    'scale_pos_weight': [120, 140, 160],
+    'feature_fraction': [0.1, 0.5, 0.7],
+    'max_bin': [500, 1000, 1500],
+    }
+
+# Create classifier to use
+mdl = lgb.LGBMClassifier(
+          boosting_type= 'gbdt',
+          objective = 'binary',
+          silent = True,
+          learning_rate = params['learning_rate'],
+          num_leaves = params['num_leaves'],
+          min_child_samples = params['min_child_samples'],
+          min_child_weight = params['min_child_weight'],
+          lambda_l1 = params['lambda_l1'],
+          lambda_l2 = params['lambda_l2'],
+          scale_pos_weight = params['scale_pos_weight'],
+          feature_fraction = params['feature_fraction'],
+          max_bin = params['max_bin'])
+
+# View the default model params:
+mdl.get_params().keys()
+
+# Create the grid
+grid = GridSearchCV(mdl, gridParams, verbose=2, cv=4, n_jobs=-1)
+
+# Run the grid
+grid.fit(main_scaled_df_train_x, main_scaled_df_train_y)
+
+# Print the best parameters found
+print(grid.best_params_)
+print(grid.best_score_)
+
+# Using parameters already set above, replace in the best from the grid search
+params['colsample_bytree'] = grid.best_params_['colsample_bytree']
+params['learning_rate'] = grid.best_params_['learning_rate']
+params['n_estimators'] = grid.best_params_['n_estimators']
+params['num_leaves'] = grid.best_params_['num_leaves']
+params['subsample'] = grid.best_params_['subsample']
+
+#Train model on selected parameters and number of iterations
+grid_lgbm = lgb.train(params, lgb_train,
+                 init_model = None,
+                 early_stopping_rounds = 0,
+                 valid_sets = lgb_test,
+                 verbose_eval = False)
+
+#Predict on test set
+predictions_lgbm_prob = grid_lgbm.predict(main_scaled_df_test_x)
+predictions_lgbm_01 = np.where(predictions_lgbm_prob > 0.5, 1, 0) #Turn probability to 0-1 binary output
+
+model_test_results3 = pd.DataFrame({'trueValue': main_scaled_df_test_y, \
+                                   'predictedValue': predictions_lgbm_prob})
+
+# store accuracy
+global_accuracy.append(100-(round(np.mean(predictions_lgbm_prob
+                                  != main_scaled_df_test_y),2)))
+    
+
+roc_scores.update({'GBM3': roc_auc_score(model_test_results3.trueValue, \
+                                model_test_results3.predictedValue)})
+
+# setup plots
+#Print accuracy
+acc_lgbm = accuracy_score(main_scaled_df_test_y, predictions_lgbm_01)
+print('Overall accuracy of Light GBM model:', acc_lgbm)
+
+#Print Area Under Curve
+plt.figure()
+false_positive_rate, recall, thresholds = roc_curve(main_scaled_df_test_y, 
+                                                    predictions_lgbm_01)
+roc_auc = auc(false_positive_rate, recall)
+plt.title('Receiver Operating Characteristic (ROC)')
+plt.plot(false_positive_rate, recall, 'b', label = 'AUC = %0.3f' %roc_auc)
+plt.legend(loc='lower right')
+plt.plot([0,1], [0,1], 'r--')
+plt.xlim([0.0,1.0])
+plt.ylim([0.0,1.0])
+plt.ylabel('Recall')
+plt.xlabel('Fall-out (1-Specificity)')
+plt.show()
+
+print('AUC score:', roc_auc)
+
+#Print Confusion Matrix
+plt.figure()
+cm = confusion_matrix(main_scaled_df_test_y, predictions_lgbm_01)
 labels = ['No Churn', 'Churn']
 plt.figure(figsize=(8,6))
 sns.heatmap(cm, xticklabels = labels, yticklabels = labels, annot = True, \
