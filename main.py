@@ -34,10 +34,11 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.linear_model import LassoCV, LogisticRegression, LinearRegression
 from sklearn.metrics import confusion_matrix, recall_score, roc_curve, auc,\
-                            classification_report, roc_auc_score
+                            classification_report, roc_auc_score, \
+                            accuracy_score
 
 # Set display options for pandas
 #pd.set_option('display.max_rows', 100)
@@ -557,7 +558,7 @@ plt.title('Correlation matrix for > 0.05 correlation', y=1.1)
 cols = list(main_x.columns)
 # sets a max value
 pmax = 1
-
+p_list = []
 # while loop that calculates the p values of each attribute using the 
 # OLS model and eliminiates the highest value from the list of columns
 # loop breaks if all columns remaining have less than 0.05 p value
@@ -570,6 +571,7 @@ try:
         p = pd.Series(model.pvalues.values[1:], index = cols)
         pmax = max(p)
         feature_with_p_max = p.idxmax()
+        p_list.append([feature_with_p_max, round(pmax, 4)])
         if(pmax > 0.05):
             cols.remove(feature_with_p_max)
         else:
@@ -581,8 +583,6 @@ except Exception as e:
 # sets and prints the remaining unremoved features
 selected_features_BE = cols
 print(selected_features_BE)
-
-len(selected_features_BE)
 
 # creates a dataframe with the ols selected columns
 ols_df = main_df[selected_features_BE]
@@ -609,8 +609,7 @@ score_list = []
 for n in range(len(nof_list)):
     X_train, X_test, y_train, y_test = train_test_split(main_x, main_y, 
                                             test_size = 0.3, random_state = 0)
-    #model = LinearRegression()
-    model = svm.SVC(kernel = 'linear')
+    model = LinearRegression()
     rfe = RFE(model,nof_list[n])
     X_train_rfe = rfe.fit_transform(X_train,y_train)
     X_test_rfe = rfe.transform(X_test)
@@ -621,7 +620,7 @@ for n in range(len(nof_list)):
         high_score = score
         nof = nof_list[n]
 
-# 55 features score of 0.033387
+# 55 features score of 0.034677
 print("Optimum number of features: %d" %nof)
 print("Score with %d features: %f" % (nof, high_score))
 
@@ -634,7 +633,7 @@ cols = list(main_x.columns)
 model = LinearRegression()
 
 #Initializing RFE model with 55 features
-rfe = RFE(model, 55)   
+rfe = RFE(model, 29)   
           
 #Transforming data using RFE
 X_rfe = rfe.fit_transform(main_x,main_y)  
@@ -1286,334 +1285,335 @@ timings_list.append(['naive time end', time.time()])
 # Start Random Forest
 ######
 
-####
-# Start RF accuracy tests
-####
+#####
+## Start RF accuracy tests
+#####
+#
+## Random forest classifiers using a range from
+## 1 to 25 trees and from 1 to 10 depth of each tree
+## Set random state to 1337 for repeatability
+#
+## Create a list to store the optimal tree and depth values 
+## for each random forest classifier
+#trees_depth = []
+#
+## create an empty list to store the rf accuracy at various settings
+#rf_accuracy = []
+#
+## setup an empty dataframe for the rf tests
+#rf_accuracy_df = pd.DataFrame()
+#
+#####
+## Start pear five dataSet
+#####
+#
+#pred_list = []
+#
+## RF with iterator
+#for trees in range(1, 26):
+#    for depth in range(1, 11):
+#        rf_clf_test = RandomForestClassifier(n_estimators = trees, 
+#                                    max_depth = depth, criterion ='entropy',
+#                                    random_state = 1337)
+#        rf_clf_test.fit(pearsons_df_train_x, pearsons_df_train_y)
+#        pred_list.append([trees, depth, 
+#                    round(np.mean(rf_clf_test.predict(pearsons_df_test_x) 
+#                    == pearsons_df_test_y) 
+#                    * 100, 2), 'pearsons'])
+#         
+##create a dataframe from the classifer data
+#forest_df_1 = pd.DataFrame(pred_list, columns = ['Estimators', 'Depth',
+#                                                 'Accuracy', 'Set'])
+#
+## append forest 1 to full df
+#rf_accuracy_df = rf_accuracy_df.append(forest_df_1)
+#
+## store the lowest error rate value from the classifier
+#ind = forest_df_1.loc[forest_df_1['Accuracy'] == 
+#                      max(forest_df_1.Accuracy)].values
+#
+## pull out the number of trees and depth
+#trees_depth.append(int(ind.item(0)))
+#trees_depth.append(int(ind.item(1)))
+#
+## append the models accruacy to the accuracy list
+#rf_accuracy.append(round(ind.item(2), 2))
+#
+#print('Pearsons:\nOptimal trees:', trees_depth[0],
+#      '\nOptimal depth:', trees_depth[1])
+#
+#####
+## End pear five dataSet
+#####
+#
+#####
+## Start ols dataSet
+#####
+#
+#pred_list = []
+#
+#for trees in range(1, 26):
+#    for depth in range(1, 11):
+#        rf_clf_test = RandomForestClassifier(n_estimators = trees, 
+#                                    max_depth = depth, criterion ='entropy',
+#                                    random_state = 1337)
+#        rf_clf_test.fit(ols_df_train_x, ols_df_train_y)
+#        pred_list.append([trees, depth, 
+#                    round(np.mean(rf_clf_test.predict(ols_df_test_x) 
+#                    == ols_df_test_y) 
+#                    * 100, 2), 'ols'])
+#
+## create a dataframe from the classifer data
+#forest_df_3 = pd.DataFrame(pred_list, columns = ['Estimators', 'Depth',
+#                                                 'Accuracy', 'Set'])
+#
+## append forest 3 to full df
+#rf_accuracy_df = rf_accuracy_df.append(forest_df_3)
+#
+## store the lowest error rate value from the classifier
+#ind = forest_df_3.loc[forest_df_3['Accuracy'] == 
+#                      max(forest_df_3.Accuracy)].values
+#                      
+## pull out the number of trees and depth
+#trees_depth.append(int(ind.item(0)))
+#trees_depth.append(int(ind.item(1)))
+#
+## append the models accruacy to the accuracy list
+#rf_accuracy.append(round(ind.item(2), 2))
+#
+#print('OLS:\nOptimal trees:', trees_depth[2],
+#      '\nOptimal depth:', trees_depth[3])
+#
+#
+#####
+## End ols dataSet
+#####
+#
+#####
+## Start rfe dataSet
+#####
+#
+#pred_list = []
+#
+#for trees in range(1, 26):
+#    for depth in range(1, 11):
+#        rf_clf_test = RandomForestClassifier(n_estimators = trees, 
+#                                    max_depth = depth, criterion ='entropy',
+#                                    random_state = 1337)
+#        rf_clf_test.fit(rfe_df_train_x, rfe_df_train_y)
+#        pred_list.append([trees, depth, 
+#                    round(np.mean(rf_clf_test.predict(rfe_df_test_x) 
+#                    == rfe_df_test_y) 
+#                    * 100, 2), 'rfe'])
+#
+## create a dataframe from the classifer data
+#forest_df_4 = pd.DataFrame(pred_list, columns = ['Estimators', 'Depth',
+#                                                 'Accuracy', 'Set'])
+#
+## append forest 4 to full df
+#rf_accuracy_df = rf_accuracy_df.append(forest_df_4)
+#
+## store the lowest error rate value from the classifier
+#ind = forest_df_4.loc[forest_df_4['Accuracy'] == 
+#                      max(forest_df_4.Accuracy)].values
+#                      
+## pull out the number of trees and depth
+#trees_depth.append(int(ind.item(0)))
+#trees_depth.append(int(ind.item(1)))
+#
+## append the models accruacy to the accuracy list
+#rf_accuracy.append(round(ind.item(2), 2))
+#
+#print('RFE:\nOptimal trees:', trees_depth[4],
+#      '\nOptimal depth:', trees_depth[5])
+#
+#####
+## End rfe dataSet
+#####
+#
+#####
+## Start lasso dataSet
+#####
+#
+#pred_list = []
+#
+#for trees in range(1, 26):
+#    for depth in range(1, 11):
+#        rf_clf_test = RandomForestClassifier(n_estimators = trees, 
+#                                    max_depth = depth, criterion ='entropy',
+#                                    random_state = 1337)
+#        rf_clf_test.fit(lasso_df_train_x, lasso_df_train_y)
+#        pred_list.append([trees, depth, 
+#                    round(np.mean(rf_clf_test.predict(lasso_df_test_x) 
+#                    == lasso_df_test_y) 
+#                    * 100, 2), 'lasso'])
+#
+## create a dataframe from the classifer data
+#forest_df_5 = pd.DataFrame(pred_list, columns = ['Estimators', 'Depth',
+#                                                 'Accuracy', 'Set'])
+#
+## append forest 5 to full df
+#rf_accuracy_df = rf_accuracy_df.append(forest_df_5)
+#
+## store the lowest error rate value from the classifier
+#ind = forest_df_5.loc[forest_df_5['Accuracy'] == 
+#                      max(forest_df_5.Accuracy)].values
+#                      
+## pull out the number of trees and depth
+#trees_depth.append(int(ind.item(0)))
+#trees_depth.append(int(ind.item(1)))
+#
+## append the models accruacy to the accuracy list
+#rf_accuracy.append(round(ind.item(2), 2))
+#
+#print('Lasso:\nOptimal trees:', trees_depth[6],
+#      '\nOptimal depth:', trees_depth[7])
+#
+#####
+## End lasso dataSet
+#####
+#
+#####
+## Start full dataSet
+#####
+#
+#pred_list = []
+#
+#for trees in range(1, 26):
+#    for depth in range(1, 11):
+#        rf_clf_test = RandomForestClassifier(n_estimators = trees, 
+#                                    max_depth = depth, criterion ='entropy',
+#                                    random_state = 1337)
+#        rf_clf_test.fit(full_df_train_x, full_df_train_y)
+#        pred_list.append([trees, depth, 
+#                    round(np.mean(rf_clf_test.predict(full_df_test_x) 
+#                    == full_df_test_y) 
+#                    * 100, 2), 'full'])
+#
+## create a dataframe from the classifer data
+#forest_df_6 = pd.DataFrame(pred_list, columns = ['Estimators', 'Depth',
+#                                                 'Accuracy', 'Set'])
+#
+## append forest 6 to full df
+#rf_accuracy_df = rf_accuracy_df.append(forest_df_6)
+#    
+## store the lowest error rate value from the classifier
+#ind = forest_df_6.loc[forest_df_6['Accuracy'] == 
+#                      max(forest_df_6.Accuracy)].values
+#                      
+## pull out the number of trees and depth
+#trees_depth.append(int(ind.item(0)))
+#trees_depth.append(int(ind.item(1)))
+#
+## append the models accruacy to the accuracy list
+#rf_accuracy.append(round(ind.item(2), 2))
+#
+#print('Full:\nOptimal trees:', trees_depth[8],
+#      '\nOptimal depth:', trees_depth[9])
+#
+#####
+## End full dataSet
+#####
+#
+#####
+## Start ten features
+#####
+#
+#pred_list = []
+#
+#for trees in range(1, 26):
+#    for depth in range(1, 11):
+#        rf_clf_test = RandomForestClassifier(n_estimators = trees, 
+#                                    max_depth = depth, criterion ='entropy',
+#                                    random_state = 1337)
+#        rf_clf_test.fit(ten_scaled_df_train_x, ten_scaled_df_train_y)
+#        pred_list.append([trees, depth, 
+#                    round(np.mean(rf_clf_test.predict(ten_scaled_df_test_x) 
+#                    == full_df_test_y) 
+#                    * 100, 2), 'ten'])
+#
+## create a dataframe from the classifer data
+#forest_df_7 = pd.DataFrame(pred_list, columns = ['Estimators', 'Depth',
+#                                                 'Accuracy', 'Set'])
+#
+## append forest 6 to full df
+#rf_accuracy_df = rf_accuracy_df.append(forest_df_7)
+#    
+## store the lowest error rate value from the classifier
+#ind = forest_df_7.loc[forest_df_7['Accuracy'] == 
+#                      max(forest_df_7.Accuracy)].values
+#                      
+## pull out the number of trees and depth
+#trees_depth.append(int(ind.item(0)))
+#trees_depth.append(int(ind.item(1)))
+#
+## append the models accruacy to the accuracy list
+#rf_accuracy.append(round(ind.item(2), 2))
+#
+#print('Ten:\nOptimal trees:', trees_depth[10],
+#      '\nOptimal depth:', trees_depth[11])
+#
+#####
+## End ten features
+#####
+#
+#####
+## Start twenty features
+#####
+#
+#pred_list = []
+#
+#for trees in range(1, 26):
+#    for depth in range(1, 11):
+#        rf_clf_test = RandomForestClassifier(n_estimators = trees, 
+#                                    max_depth = depth, criterion ='entropy',
+#                                    random_state = 1337)
+#        rf_clf_test.fit(twenty_scaled_df_train_x, twenty_scaled_df_train_y)
+#        pred_list.append([trees, depth, 
+#                    round(np.mean(rf_clf_test.predict(twenty_scaled_df_test_x) 
+#                    == full_df_test_y) 
+#                    * 100, 2), 'twenty'])
+#
+## create a dataframe from the classifer data
+#forest_df_8 = pd.DataFrame(pred_list, columns = ['Estimators', 'Depth',
+#                                                 'Accuracy', 'Set'])
+#
+## append forest 6 to full df
+#rf_accuracy_df = rf_accuracy_df.append(forest_df_8)
+#    
+## store the lowest error rate value from the classifier
+#ind = forest_df_8.loc[forest_df_8['Accuracy'] == 
+#                      max(forest_df_8.Accuracy)].values
+#                      
+## pull out the number of trees and depth
+#trees_depth.append(int(ind.item(0)))
+#trees_depth.append(int(ind.item(1)))
+#
+## append the models accruacy to the accuracy list
+#rf_accuracy.append(round(ind.item(2), 2))
+#
+#print('Twenty:\nOptimal trees:', trees_depth[12],
+#      '\nOptimal depth:', trees_depth[13])
+#
+#####
+## End twenty features
+#####
+#
+## Create palette
+#palette = dict(zip(rf_accuracy_df.Depth.unique(),
+#                   sns.color_palette("tab10", 10)))
+#
+## Plot
+#sns.relplot(x="Estimators", y="Accuracy",
+#            hue="Depth", col="Set",
+#            palette=palette, col_wrap=3,
+#            height=3, aspect=1, facet_kws=dict(sharex=False),
+#            kind="line", legend="full", data=rf_accuracy_df)
+#
+#####
+## End RF accuracy tests
+#####
 
-# Random forest classifiers using a range from
-# 1 to 25 trees and from 1 to 10 depth of each tree
-# Set random state to 1337 for repeatability
-
-# Create a list to store the optimal tree and depth values 
-# for each random forest classifier
-trees_depth = []
-
-# create an empty list to store the rf accuracy at various settings
-rf_accuracy = []
-
-# setup an empty dataframe for the rf tests
-rf_accuracy_df = pd.DataFrame()
-
-####
-# Start pear five dataSet
-####
-
-pred_list = []
-
-# RF with iterator
-for trees in range(1, 26):
-    for depth in range(1, 11):
-        rf_clf_test = RandomForestClassifier(n_estimators = trees, 
-                                    max_depth = depth, criterion ='entropy',
-                                    random_state = 1337)
-        rf_clf_test.fit(pearsons_df_train_x, pearsons_df_train_y)
-        pred_list.append([trees, depth, 
-                    round(np.mean(rf_clf_test.predict(pearsons_df_test_x) 
-                    == pearsons_df_test_y) 
-                    * 100, 2), 'pearsons'])
-         
-#create a dataframe from the classifer data
-forest_df_1 = pd.DataFrame(pred_list, columns = ['Estimators', 'Depth',
-                                                 'Accuracy', 'Set'])
-
-# append forest 1 to full df
-rf_accuracy_df = rf_accuracy_df.append(forest_df_1)
-
-# store the lowest error rate value from the classifier
-ind = forest_df_1.loc[forest_df_1['Accuracy'] == 
-                      max(forest_df_1.Accuracy)].values
-
-# pull out the number of trees and depth
-trees_depth.append(int(ind.item(0)))
-trees_depth.append(int(ind.item(1)))
-
-# append the models accruacy to the accuracy list
-rf_accuracy.append(round(ind.item(2), 2))
-
-print('Pearsons:\nOptimal trees:', trees_depth[0],
-      '\nOptimal depth:', trees_depth[1])
-
-####
-# End pear five dataSet
-####
-
-####
-# Start ols dataSet
-####
-
-pred_list = []
-
-for trees in range(1, 26):
-    for depth in range(1, 11):
-        rf_clf_test = RandomForestClassifier(n_estimators = trees, 
-                                    max_depth = depth, criterion ='entropy',
-                                    random_state = 1337)
-        rf_clf_test.fit(ols_df_train_x, ols_df_train_y)
-        pred_list.append([trees, depth, 
-                    round(np.mean(rf_clf_test.predict(ols_df_test_x) 
-                    == ols_df_test_y) 
-                    * 100, 2), 'ols'])
-
-# create a dataframe from the classifer data
-forest_df_3 = pd.DataFrame(pred_list, columns = ['Estimators', 'Depth',
-                                                 'Accuracy', 'Set'])
-
-# append forest 3 to full df
-rf_accuracy_df = rf_accuracy_df.append(forest_df_3)
-
-# store the lowest error rate value from the classifier
-ind = forest_df_3.loc[forest_df_3['Accuracy'] == 
-                      max(forest_df_3.Accuracy)].values
-                      
-# pull out the number of trees and depth
-trees_depth.append(int(ind.item(0)))
-trees_depth.append(int(ind.item(1)))
-
-# append the models accruacy to the accuracy list
-rf_accuracy.append(round(ind.item(2), 2))
-
-print('OLS:\nOptimal trees:', trees_depth[2],
-      '\nOptimal depth:', trees_depth[3])
-
-
-####
-# End ols dataSet
-####
-
-####
-# Start rfe dataSet
-####
-
-pred_list = []
-
-for trees in range(1, 26):
-    for depth in range(1, 11):
-        rf_clf_test = RandomForestClassifier(n_estimators = trees, 
-                                    max_depth = depth, criterion ='entropy',
-                                    random_state = 1337)
-        rf_clf_test.fit(rfe_df_train_x, rfe_df_train_y)
-        pred_list.append([trees, depth, 
-                    round(np.mean(rf_clf_test.predict(rfe_df_test_x) 
-                    == rfe_df_test_y) 
-                    * 100, 2), 'rfe'])
-
-# create a dataframe from the classifer data
-forest_df_4 = pd.DataFrame(pred_list, columns = ['Estimators', 'Depth',
-                                                 'Accuracy', 'Set'])
-
-# append forest 4 to full df
-rf_accuracy_df = rf_accuracy_df.append(forest_df_4)
-
-# store the lowest error rate value from the classifier
-ind = forest_df_4.loc[forest_df_4['Accuracy'] == 
-                      max(forest_df_4.Accuracy)].values
-                      
-# pull out the number of trees and depth
-trees_depth.append(int(ind.item(0)))
-trees_depth.append(int(ind.item(1)))
-
-# append the models accruacy to the accuracy list
-rf_accuracy.append(round(ind.item(2), 2))
-
-print('RFE:\nOptimal trees:', trees_depth[4],
-      '\nOptimal depth:', trees_depth[5])
-
-####
-# End rfe dataSet
-####
-
-####
-# Start lasso dataSet
-####
-
-pred_list = []
-
-for trees in range(1, 26):
-    for depth in range(1, 11):
-        rf_clf_test = RandomForestClassifier(n_estimators = trees, 
-                                    max_depth = depth, criterion ='entropy',
-                                    random_state = 1337)
-        rf_clf_test.fit(lasso_df_train_x, lasso_df_train_y)
-        pred_list.append([trees, depth, 
-                    round(np.mean(rf_clf_test.predict(lasso_df_test_x) 
-                    == lasso_df_test_y) 
-                    * 100, 2), 'lasso'])
-
-# create a dataframe from the classifer data
-forest_df_5 = pd.DataFrame(pred_list, columns = ['Estimators', 'Depth',
-                                                 'Accuracy', 'Set'])
-
-# append forest 5 to full df
-rf_accuracy_df = rf_accuracy_df.append(forest_df_5)
-
-# store the lowest error rate value from the classifier
-ind = forest_df_5.loc[forest_df_5['Accuracy'] == 
-                      max(forest_df_5.Accuracy)].values
-                      
-# pull out the number of trees and depth
-trees_depth.append(int(ind.item(0)))
-trees_depth.append(int(ind.item(1)))
-
-# append the models accruacy to the accuracy list
-rf_accuracy.append(round(ind.item(2), 2))
-
-print('Lasso:\nOptimal trees:', trees_depth[6],
-      '\nOptimal depth:', trees_depth[7])
-
-####
-# End lasso dataSet
-####
-
-####
-# Start full dataSet
-####
-
-pred_list = []
-
-for trees in range(1, 26):
-    for depth in range(1, 11):
-        rf_clf_test = RandomForestClassifier(n_estimators = trees, 
-                                    max_depth = depth, criterion ='entropy',
-                                    random_state = 1337)
-        rf_clf_test.fit(full_df_train_x, full_df_train_y)
-        pred_list.append([trees, depth, 
-                    round(np.mean(rf_clf_test.predict(full_df_test_x) 
-                    == full_df_test_y) 
-                    * 100, 2), 'full'])
-
-# create a dataframe from the classifer data
-forest_df_6 = pd.DataFrame(pred_list, columns = ['Estimators', 'Depth',
-                                                 'Accuracy', 'Set'])
-
-# append forest 6 to full df
-rf_accuracy_df = rf_accuracy_df.append(forest_df_6)
-    
-# store the lowest error rate value from the classifier
-ind = forest_df_6.loc[forest_df_6['Accuracy'] == 
-                      max(forest_df_6.Accuracy)].values
-                      
-# pull out the number of trees and depth
-trees_depth.append(int(ind.item(0)))
-trees_depth.append(int(ind.item(1)))
-
-# append the models accruacy to the accuracy list
-rf_accuracy.append(round(ind.item(2), 2))
-
-print('Full:\nOptimal trees:', trees_depth[8],
-      '\nOptimal depth:', trees_depth[9])
-
-####
-# End full dataSet
-####
-
-####
-# Start ten features
-####
-
-pred_list = []
-
-for trees in range(1, 26):
-    for depth in range(1, 11):
-        rf_clf_test = RandomForestClassifier(n_estimators = trees, 
-                                    max_depth = depth, criterion ='entropy',
-                                    random_state = 1337)
-        rf_clf_test.fit(ten_scaled_df_train_x, ten_scaled_df_train_y)
-        pred_list.append([trees, depth, 
-                    round(np.mean(rf_clf_test.predict(ten_scaled_df_test_x) 
-                    == full_df_test_y) 
-                    * 100, 2), 'ten'])
-
-# create a dataframe from the classifer data
-forest_df_7 = pd.DataFrame(pred_list, columns = ['Estimators', 'Depth',
-                                                 'Accuracy', 'Set'])
-
-# append forest 6 to full df
-rf_accuracy_df = rf_accuracy_df.append(forest_df_7)
-    
-# store the lowest error rate value from the classifier
-ind = forest_df_7.loc[forest_df_7['Accuracy'] == 
-                      max(forest_df_7.Accuracy)].values
-                      
-# pull out the number of trees and depth
-trees_depth.append(int(ind.item(0)))
-trees_depth.append(int(ind.item(1)))
-
-# append the models accruacy to the accuracy list
-rf_accuracy.append(round(ind.item(2), 2))
-
-print('Ten:\nOptimal trees:', trees_depth[10],
-      '\nOptimal depth:', trees_depth[11])
-
-####
-# End ten features
-####
-
-####
-# Start twenty features
-####
-
-pred_list = []
-
-for trees in range(1, 26):
-    for depth in range(1, 11):
-        rf_clf_test = RandomForestClassifier(n_estimators = trees, 
-                                    max_depth = depth, criterion ='entropy',
-                                    random_state = 1337)
-        rf_clf_test.fit(twenty_scaled_df_train_x, twenty_scaled_df_train_y)
-        pred_list.append([trees, depth, 
-                    round(np.mean(rf_clf_test.predict(twenty_scaled_df_test_x) 
-                    == full_df_test_y) 
-                    * 100, 2), 'twenty'])
-
-# create a dataframe from the classifer data
-forest_df_8 = pd.DataFrame(pred_list, columns = ['Estimators', 'Depth',
-                                                 'Accuracy', 'Set'])
-
-# append forest 6 to full df
-rf_accuracy_df = rf_accuracy_df.append(forest_df_8)
-    
-# store the lowest error rate value from the classifier
-ind = forest_df_8.loc[forest_df_8['Accuracy'] == 
-                      max(forest_df_8.Accuracy)].values
-                      
-# pull out the number of trees and depth
-trees_depth.append(int(ind.item(0)))
-trees_depth.append(int(ind.item(1)))
-
-# append the models accruacy to the accuracy list
-rf_accuracy.append(round(ind.item(2), 2))
-
-print('Twenty:\nOptimal trees:', trees_depth[12],
-      '\nOptimal depth:', trees_depth[13])
-
-####
-# End twenty features
-####
-
-# Create palette
-palette = dict(zip(rf_accuracy_df.Depth.unique(),
-                   sns.color_palette("tab10", 10)))
-
-# Plot
-sns.relplot(x="Estimators", y="Accuracy",
-            hue="Depth", col="Set",
-            palette=palette, col_wrap=3,
-            height=3, aspect=1, facet_kws=dict(sharex=False),
-            kind="line", legend="full", data=rf_accuracy_df)
-
-####
-# End RF accuracy tests
-####
 ###
 # Start fixed value RFs
 ###
@@ -3361,56 +3361,70 @@ timings_list.append(['global time end', time.time()])
 # Start prediction prints
 ####
 
-# reorder roc scores from highest to lowest
-roc_scores = {k: v for k, v in sorted(roc_scores.items(), \
-                                      key=lambda item: item[1], \
-                                      reverse = True)}
+global_accuracy = global_accuracy[2:]
 
-# setup data for algorithm comparisons
-algorithms = ['GBM', 'Random Forest', 'KNN'] 
-accuracy = [99, 99.72, 99.71]
-roc = ['67.26%', '52.34%', '51.46%']
-duration = ['<1','<1','<1','<1']
 
-# create a dataframe
-prediction_df = pd.DataFrame(list(zip(algorithms, accuracy, roc, duration)),
-                             columns = ['Algorithm', 'Accuracy', 'ROC Score',\
-                                        'Duration'])
+## reorder roc scores from highest to lowest
+#roc_scores = {k: v for k, v in sorted(roc_scores.items(), \
+#                                      key=lambda item: item[1], \
+#                                      reverse = True)}
+
+## setup data for algorithm comparisons
+#algorithms = ['GBM', 'Random Forest', 'KNN'] 
+#accuracy = [99, 99.72, 99.71]
+#roc = ['67.26%', '52.34%', '51.46%']
+#duration = ['<1','<1','<1','<1']
+#
+## create a dataframe
+#prediction_df = pd.DataFrame(list(zip(algorithms, accuracy, roc, duration)),
+#                             columns = ['Algorithm', 'Accuracy', 'ROC Score',\
+#                                        'Duration'])
 #
 ## Creates a dataframe containing information about the classifiers and accuracy
 #prediction_df = pd.DataFrame(columns = ['Algorithm', 'Accuracy', 'ROC Score',\
 #                                        'Duration'])
 #
-## Build out a dataframe to store the classifiers and their accuracy
-#for i in range(0, len(algorithms)):
-#    for k in range(0, len(attributes)):
-#        prediction_df = prediction_df.append({'classifier' : classifiers[i],
-#                                      'details' : 'None',
-#                                      'attributes' : attributes[k],
-#                                      'accuracy' : 0,
-#                                      'time' : 0}, 
-#                                      ignore_index=True)
-#
-## Move indexes down 1 starting at 12 to add Random forest with full dataset
-#prediction_df.index = (prediction_df.index[:12].tolist() + 
-#                      (prediction_df.index[12:] + 1).tolist())
-#
-## Adds Random forest with full dataset to the dataframe
-#prediction_df.loc[12] = ['Random Forest', 'None', 'Full', 0, 0]
-#
-## reorders the indexes after the insert
-#prediction_df = prediction_df.sort_index()
-#
-## Updates the accuracy
-#prediction_df['accuracy'] = global_accuracy
-#
-## Manually set algorithm details
-## decision tree
-#prediction_df['details'].iloc[0:4] = 'Entropy'
-#
-## Naive Bayes
-#prediction_df['details'].iloc[4:7] = 'Gaussian'
-#
+# create a list containing the attribute reduction methods
+attributes = ['Pearsons', 'OLS', 'RFE', 'Lasso']
+
+# create a list containing the classifier names
+classifiers = ['Decision Tree', 'Naive Bayes', 'Random Forest', 'KNN', 'SVM', 
+               'SVM', 'SVM', 'Logistic Regression', 'Logistic Regression',
+               'Logistic Regression']
+
+# Creates a dataframe containing information about the classifiers and accuracy
+prediction_df = pd.DataFrame(columns =['classifier', 'details', 'attributes',
+                                       'accuracy', 'time'])
+
+# Build out a dataframe to store the classifiers and their accuracy
+for i in range(0, len(classifiers)):
+    for k in range(0, len(attributes)):
+        prediction_df = prediction_df.append({'classifier' : classifiers[i],
+                                      'details' : 'None',
+                                      'attributes' : attributes[k],
+                                      'accuracy' : 0,
+                                      'time' : 0}, 
+                                      ignore_index=True)
+
+# Move indexes down 1 starting at 15 to add Random forest with full dataset
+prediction_df.index = (prediction_df.index[:12].tolist() + 
+                      (prediction_df.index[12:] + 1).tolist())
+
+# Adds Random forest with full dataset to the dataframe
+prediction_df.loc[12] = ['Random Forest', 'None', 'Full', 0, 0]
+
+# reorders the indexes after the insert
+prediction_df = prediction_df.sort_index()
+
+# Updates the accuracy
+prediction_df['accuracy'] = global_accuracy[4:]
+
+# Manually set algorithm details
+# decision tree
+prediction_df['details'].iloc[0:5] = 'Entropy'
+
+# Naive Bayes
+prediction_df['details'].iloc[5:11] = 'Gaussian'
 ## Random Forest tree/depth
 #prediction_df['details'].iloc[8] = '10 trees, 6 depth'
 #prediction_df['details'].iloc[9] = '19 trees, 10 depth'
@@ -3442,68 +3456,68 @@ prediction_df = pd.DataFrame(list(zip(algorithms, accuracy, roc, duration)),
 ## log newton-cg solver
 #prediction_df['details'].iloc[37:41] = 'Newton-cg'
 #
-## creates a duration list
-#dur_list = []
-#
-## stores the durations of each algorithm from start to finish
-#for dur in range(0, len(algorithm_duration_list), 2):
-#    dur_list.append(algorithm_duration_list[dur + 1] - 
-#                    algorithm_duration_list[dur])
-#
-## stores the durations into the prediction_df
-#prediction_df['time'] = dur_list
-#
-## Print durations 
-#print('Durations for each of the major steps in the process,', 
-#      'measured in seconds\n', timings_list[1][0],
-#int(timings_list[2][1]) - int(timings_list[1][1]),'\n',
-#
-#timings_list[3][0],
-#int(timings_list[4][1]) - int(timings_list[3][1]),'\n',
-#
-#timings_list[5][0],
-#int(timings_list[6][1]) - int(timings_list[5][1]),'\n',
-#
-#timings_list[8][0],
-#int(timings_list[9][1]) - int(timings_list[8][1]),'\n',
-#
-#timings_list[10][0],
-#int(timings_list[11][1]) - int(timings_list[10][1]),'\n',
-#
-#timings_list[12][0],
-#int(timings_list[13][1]) - int(timings_list[12][1]),'\n',
-#
-#timings_list[7][0],
-#int(timings_list[14][1]) - int(timings_list[7][1]),'\n',
-#
-#timings_list[16][0],
-#int(timings_list[17][1]) - int(timings_list[16][1]),'\n',
-#
-#timings_list[18][0],
-#int(timings_list[19][1]) - int(timings_list[18][1]),'\n',
-#
-#timings_list[20][0],
-#int(timings_list[21][1]) - int(timings_list[20][1]),'\n',
-#
-#timings_list[22][0],
-#int(timings_list[23][1]) - int(timings_list[22][1]),'\n',
-#
-#timings_list[24][0],
-#int(timings_list[25][1]) - int(timings_list[24][1]),'\n',
-#
-#timings_list[26][0],
-#int(timings_list[27][1]) - int(timings_list[26][1]),'\n',
-#
-#timings_list[28][0],
-#int(timings_list[29][1]) - int(timings_list[28][1]),'\n',
-#
-#timings_list[15][0],
-#int(timings_list[30][1]) - int(timings_list[15][1]),'\n',
-#
-#timings_list[0][0],
-#int(timings_list[-1][1])- int(timings_list[0][1]))
-#
-#
+# creates a duration list
+dur_list = []
+
+# stores the durations of each algorithm from start to finish
+for dur in range(0, len(algorithm_duration_list), 2):
+    dur_list.append(algorithm_duration_list[dur + 1] - 
+                    algorithm_duration_list[dur])
+
+# stores the durations into the prediction_df
+prediction_df['time'] = dur_list[4:]
+
+# Print durations 
+print('Durations for each of the major steps in the process,', 
+      'measured in seconds\n', timings_list[1][0],
+int(timings_list[2][1]) - int(timings_list[1][1]),'\n',
+
+timings_list[3][0],
+int(timings_list[4][1]) - int(timings_list[3][1]),'\n',
+
+timings_list[5][0],
+int(timings_list[6][1]) - int(timings_list[5][1]),'\n',
+
+timings_list[8][0],
+int(timings_list[9][1]) - int(timings_list[8][1]),'\n',
+
+timings_list[10][0],
+int(timings_list[11][1]) - int(timings_list[10][1]),'\n',
+
+timings_list[12][0],
+int(timings_list[13][1]) - int(timings_list[12][1]),'\n',
+
+timings_list[7][0],
+int(timings_list[14][1]) - int(timings_list[7][1]),'\n',
+
+timings_list[16][0],
+int(timings_list[17][1]) - int(timings_list[16][1]),'\n',
+
+timings_list[18][0],
+int(timings_list[19][1]) - int(timings_list[18][1]),'\n',
+
+timings_list[20][0],
+int(timings_list[21][1]) - int(timings_list[20][1]),'\n',
+
+timings_list[22][0],
+int(timings_list[23][1]) - int(timings_list[22][1]),'\n',
+
+timings_list[24][0],
+int(timings_list[25][1]) - int(timings_list[24][1]),'\n',
+
+timings_list[26][0],
+int(timings_list[27][1]) - int(timings_list[26][1]),'\n',
+
+timings_list[28][0],
+int(timings_list[29][1]) - int(timings_list[28][1]),'\n',
+
+timings_list[15][0],
+int(timings_list[30][1]) - int(timings_list[15][1]),'\n',
+
+timings_list[0][0],
+int(timings_list[-1][1])- int(timings_list[0][1]))
+
+
 ## Finds the most and least accurate algorithms
 #accurate = [prediction_df[prediction_df['accuracy'] == 
 #              max(prediction_df.accuracy)].values[0]]
@@ -3545,7 +3559,7 @@ sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
 ax.xaxis.set_label_position("top")
 ax.set_ylim([0,2])
 plt.tight_layout()
-plt.title('Confusion matrix for KNN Pearsons', y=1.1)
+plt.title('Confusion matrix for LGBM', y=1.1)
 plt.ylabel('Actual label')
 plt.xlabel('Predicted label')
 
@@ -3624,7 +3638,7 @@ sns.heatmap(pd.DataFrame(cm_one), annot=True, cmap="summer", fmt='g')
 ax.xaxis.set_label_position("top")
 ax.set_ylim([0,2])
 plt.tight_layout()
-plt.title('Confusion matrix for KNN Pearsons', y=1.1)
+plt.title('Confusion matrix for KNN', y=1.1)
 plt.ylabel('Actual label')
 plt.xlabel('Predicted label')
 
