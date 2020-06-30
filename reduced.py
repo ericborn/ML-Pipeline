@@ -38,7 +38,7 @@ from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.linear_model import LassoCV, LogisticRegression, LinearRegression
 from sklearn.metrics import confusion_matrix, recall_score, roc_curve, auc,\
                             classification_report, roc_auc_score, \
-                            accuracy_score
+                            accuracy_score, log_loss
 
 # Set display options for pandas
 #pd.set_option('display.max_rows', 100)
@@ -77,7 +77,7 @@ except Exception as e:
     exit('Failed to read data from: '+ str(data)+'.csv')
 
 # describe the total rows and columns
-print('The total length of the dataframe is', main_df.shape[0], 'rows'8
+print('The total length of the dataframe is', main_df.shape[0], 'rows'\
       'and the width is', main_df.shape[1], 'columns')
 
 # calculate the percentage of churn
@@ -343,7 +343,7 @@ advanced_params = {
     'bagging_freq': 0,
     
     # add a weight to the positive class examples (compensates for imbalance).
-    'scale_pos_weight': 140, 
+    'scale_pos_weight': 140,
     
     # amount of data to sample to determine histogram bins
     'subsample_for_bin': 200000,
@@ -455,10 +455,24 @@ model, evals = train_gbm(advanced_params, lgb_train, lgb_test, \
 # predicted value of y
 model_pred_y = model.predict(main_scaled_df_test_x)
 
+
 # store the true and prodicted values
 model_test_results = pd.DataFrame({'trueValue': main_scaled_df_test_y, \
                                    'predictedValue': model_pred_y})
-  
+
+fpr, tpr, threshold = roc_curve(model_test_results.trueValue, \
+                                model_test_results.predictedValue)    
+
+roc_auc = auc(fpr, tpr)
+
+log_loss(main_scaled_df_test_y, model_pred_y)
+
+plt.title("ROC Curve. Area under Curve: {:.3f}".format(roc_auc))
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+_ = plt.plot(fpr, tpr, 'r')
+    
+###############################
 # find median values for churn and no churn predction
 # -1.299 and -1.390
 median_no_churn = np.median(1/np.log(model_test_results.predictedValue[model_test_results.trueValue == 0]))
@@ -506,7 +520,7 @@ roc_scores.update({'GBM1': roc_auc_score(model_test_results.trueValue, \
    
 # setup plots  
 #Print accuracy
-acc_lgbm = accuracy_score(main_scaled_df_test_y, model_pred_y_mc)
+acc_lgbm = accuracy_score(main_scaled_df_test_y, model_pred_y)
 print('Overall accuracy of Light GBM model:', acc_lgbm)
 
 # print precision and recall values
@@ -520,6 +534,29 @@ print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
       round(recall_score(main_scaled_df_test_y, model_pred_y_mc) * 100, 2),'%')
 print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
     round(tn / (tn + fp) * 100, 2),'%')
+
+######################
+# v2
+####################
+
+# setup plots  
+#Print accuracy
+acc_lgbm = accuracy_score(main_scaled_df_test_y, model_pred_y_mnc)
+print('Overall accuracy of Light GBM model:', acc_lgbm)
+
+# print precision and recall values
+print(classification_report(main_scaled_df_test_y, model_pred_y_mnc))
+
+# TPR/TNR rates
+tn, fp, fn, tp  = confusion_matrix(main_scaled_df_test_y, \
+                                   model_pred_y_mnc).ravel()
+# TPR/TNR rates
+print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
+      round(recall_score(main_scaled_df_test_y, model_pred_y_mnc) * 100, 2),'%')
+print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
+    round(tn / (tn + fp) * 100, 2),'%')
+
+
 
 #Print Area Under Curve
 plt.figure()
@@ -701,6 +738,23 @@ plt.title('Confusion Matrix for LGBM')
 plt.ylabel('True Class')
 plt.xlabel('Predicted Class')
 plt.show()
+
+
+fpr, tpr, threshold = roc_curve(model_test_results2.trueValue, \
+                                model_test_results2.predictedValue)    
+
+roc_auc = auc(fpr, tpr)
+plt.title('Receiver Operating Characteristic (ROC)')
+plt.plot(false_positive_rate, recall, 'b', label = 'AUC = %0.3f' %roc_auc)
+plt.legend(loc='lower right')
+plt.plot([0,1], [0,1], 'r--')
+plt.xlim([0.0,1.0])
+plt.ylim([0.0,1.0])
+plt.ylabel('Recall')
+plt.xlabel('Fall-out (1-Specificity)')
+plt.show()
+
+print('AUC score:', roc_auc)
 ####
 # End building 2
 ####
@@ -765,6 +819,16 @@ plt.title('Confusion Matrix')
 plt.ylabel('True Class')
 plt.xlabel('Predicted Class')
 plt.show()
+
+fpr, tpr, threshold = roc_curve(model_test_results3.trueValue, \
+                                model_test_results3.predictedValue)    
+
+roc_auc = auc(fpr, tpr)
+
+plt.title("ROC Curve. Area under Curve: {:.3f}".format(roc_auc))
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+_ = plt.plot(fpr, tpr, 'r')
 ####
 # End building 3
 ####
