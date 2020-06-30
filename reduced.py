@@ -541,7 +541,7 @@ print('AUC score:', roc_auc)
 #Print Confusion Matrix
 plt.figure()
 cm = confusion_matrix(main_scaled_df_test_y, model_pred_y_mc)
-labels = ['Churn', 'No Churn']
+labels = ['No Churn', 'Churn']
 plt.figure(figsize=(10,10))
 sns.heatmap(cm, xticklabels = labels, yticklabels = labels, annot = True, \
             fmt='d', cmap="summer", vmin = 0.2);
@@ -632,9 +632,15 @@ model_test_results2 = pd.DataFrame({'trueValue': main_scaled_df_test_y, \
 
 # find median values for churn and no churn predction
 # -1.299 and -1.390
-median_no_churn2 = np.median(1/np.log(model_test_results2.predictedValue[model_test_results2.trueValue == 0]))
-median_churn2 = np.median(1/np.log(model_test_results2.predictedValue[model_test_results2.trueValue == 1]))
+median_no_churn2 = np.median(1/np.log(model_test_results2.predictedValue[\
+                                      model_test_results2.trueValue == 0]))
+median_churn2 = np.median(1/np.log(model_test_results2.predictedValue[\
+                                   model_test_results2.trueValue == 1]))
 
+# transform results from predicted value
+model_test_results2['y_transformed'] = 1/np.log(\
+                                        model_test_results2['predictedValue'])
+    
 # converts all predictions to 1 if < median_no_churn value otherwise 0
 model_pred_y_mnc2 = np.where(model_test_results2.y_transformed \
                                    < median_no_churn2, 1, 0)
@@ -642,11 +648,6 @@ model_pred_y_mnc2 = np.where(model_test_results2.y_transformed \
 model_pred_y_mc2 = np.where(model_test_results2.y_transformed \
                                    < median_churn2, 1, 0)
 
-# transform results from predicted value
-model_test_results2['y_transformed'] = 1/np.log(\
-                                        model_test_results2['predictedValue'])
-
- 
 # store accuracy
 global_accuracy.append(100-(round(np.mean(model_pred_y2
                                   != main_scaled_df_test_y),2)))
@@ -659,6 +660,18 @@ roc_scores.update({'GBM2': roc_auc_score(model_test_results2.trueValue, \
 #Print accuracy
 acc_lgbm = accuracy_score(main_scaled_df_test_y, model_pred_y_mc2)
 print('Overall accuracy of Light GBM model:', acc_lgbm)
+
+# print precision and recall values
+print(classification_report(main_scaled_df_test_y, model_pred_y_mc2))
+
+# TPR/TNR rates
+tn, fp, fn, tp  = confusion_matrix(main_scaled_df_test_y, \
+                                   model_pred_y_mc2).ravel()
+# TPR/TNR rates
+print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
+      round(recall_score(main_scaled_df_test_y, model_pred_y_mc2) * 100, 2),'%')
+print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
+    round(tn / (tn + fp) * 100, 2),'%')
 
 #Print Area Under Curve
 plt.figure()
@@ -681,10 +694,10 @@ print('AUC score:', roc_auc)
 plt.figure()
 cm = confusion_matrix(main_scaled_df_test_y, model_pred_y_mc2)
 labels = ['No Churn', 'Churn']
-plt.figure(figsize=(8,6))
+plt.figure(figsize=(10,10))
 sns.heatmap(cm, xticklabels = labels, yticklabels = labels, annot = True, \
-            fmt='d', cmap="Blues", vmin = 0.2);
-plt.title('Confusion Matrix')
+            fmt='d', cmap="summer", vmin = 0.2);
+plt.title('Confusion Matrix for LGBM')
 plt.ylabel('True Class')
 plt.xlabel('Predicted Class')
 plt.show()
