@@ -531,7 +531,7 @@ tn, fp, fn, tp  = confusion_matrix(main_scaled_df_test_y, \
                                    model_pred_y_mc).ravel()
 # TPR/TNR rates
 print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
-      round(recall_score(main_scaled_df_test_y, model_pred_y_mc) * 100, 2),'%')
+      round(recall_score(main_scaled_df_test_y, model_pred_y_mnc) * 100, 2),'%')
 print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
     round(tn / (tn + fp) * 100, 2),'%')
 
@@ -569,8 +569,8 @@ plt.legend(loc='lower right')
 plt.plot([0,1], [0,1], 'r--')
 plt.xlim([0.0,1.0])
 plt.ylim([0.0,1.0])
-plt.ylabel('Recall')
-plt.xlabel('Fall-out (1-Specificity)')
+plt.ylabel('True Positive Rate')
+plt.xlabel('False Positive Rate')
 plt.show()
 
 print('AUC score:', roc_auc)
@@ -611,7 +611,8 @@ def plot_roc_curve(test_res, threshold = -1.39):
     roc_auc = auc(fpr, tpr)
     plt.figure(figsize=(10,10))
     plt.grid(True)
-    plt.title('ROC Curve. Area Under Curve: {:.3f}'.format(roc_auc))
+    plt.plot(false_positive_rate, recall, 'b', label = 'AUC = %0.3f' %roc_auc)
+    plt.plot([0,1], [0,1], 'r--')
     plt.ylabel('True Positive Rate')
     plt.xlabel('False Positive Rate')
     _ = plt.plot(fpr, tpr, 'r')
