@@ -458,11 +458,15 @@ model_pred_y = model.predict(main_scaled_df_test_x)
 # store the true and prodicted values
 model_test_results = pd.DataFrame({'trueValue': main_scaled_df_test_y, \
                                    'predictedValue': model_pred_y})
-
+  
 # find median values for churn and no churn predction
 # -1.299 and -1.390
 median_no_churn = np.median(1/np.log(model_test_results.predictedValue[model_test_results.trueValue == 0]))
 median_churn = np.median(1/np.log(model_test_results.predictedValue[model_test_results.trueValue == 1]))
+
+# transform results from predicted value
+model_test_results['y_transformed'] = 1/np.log(model_test_results['predictedValue'])
+
 
 # converts all predictions to 1 if < median_no_churn value otherwise 0
 model_pred_y_mnc = np.where(model_test_results.y_transformed \
@@ -471,11 +475,9 @@ model_pred_y_mnc = np.where(model_test_results.y_transformed \
 model_pred_y_mc = np.where(model_test_results.y_transformed \
                                    < median_churn, 1, 0)
 
-# transform results from predicted value
-model_test_results['y_transformed'] = 1/np.log(model_test_results['predictedValue'])
-
 # find the customers within area under curve
-auc_based = model_test_results[model_test_results.y_transformed <= median_no_churn]
+auc_based = model_test_results[model_test_results.y_transformed <= \
+                               median_no_churn]
 
 # print customers AUC
 auc_based.trueValue.value_counts()
@@ -484,7 +486,8 @@ auc_based.trueValue.value_counts()
 auc_based.trueValue.value_counts()/auc_based.shape[0]
 
 # find the customers within area under curve
-bus_based = model_test_results[model_test_results.y_transformed <= median_churn]
+bus_based = model_test_results[model_test_results.y_transformed <= \
+                               median_churn]
 
 # print customers AUC
 bus_based.trueValue.value_counts()
@@ -500,12 +503,23 @@ global_accuracy.append(100-(round(np.mean(model_pred_y
 roc_scores = {}
 roc_scores.update({'GBM1': roc_auc_score(model_test_results.trueValue, \
                                 model_test_results.predictedValue)})
-
-# setup plots
-    
+   
+# setup plots  
 #Print accuracy
 acc_lgbm = accuracy_score(main_scaled_df_test_y, model_pred_y_mc)
 print('Overall accuracy of Light GBM model:', acc_lgbm)
+
+# print precision and recall values
+print(classification_report(main_scaled_df_test_y, model_pred_y_mc))
+
+# TPR/TNR rates
+tn, fp, fn, tp  = confusion_matrix(main_scaled_df_test_y, \
+                                   model_pred_y_mc).ravel()
+# TPR/TNR rates
+print('The TPR is:', str(tp) + '/' + str(tp + fn) + ',',
+      round(recall_score(main_scaled_df_test_y, model_pred_y_mc) * 100, 2),'%')
+print('The TNR is:', str(tn) + '/' + str(tn + fp) + ',',
+    round(tn / (tn + fp) * 100, 2),'%')
 
 #Print Area Under Curve
 plt.figure()
@@ -527,11 +541,11 @@ print('AUC score:', roc_auc)
 #Print Confusion Matrix
 plt.figure()
 cm = confusion_matrix(main_scaled_df_test_y, model_pred_y_mc)
-labels = ['No Churn', 'Churn']
-plt.figure(figsize=(8,8))
+labels = ['Churn', 'No Churn']
+plt.figure(figsize=(10,10))
 sns.heatmap(cm, xticklabels = labels, yticklabels = labels, annot = True, \
-            fmt='d', cmap="Blues", vmin = 0.2);
-plt.title('Confusion Matrix')
+            fmt='d', cmap="summer", vmin = 0.2);
+plt.title('Confusion Matrix for LGBM')
 plt.ylabel('True Class')
 plt.xlabel('Predicted Class')
 plt.show()
