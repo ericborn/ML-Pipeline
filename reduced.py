@@ -463,14 +463,24 @@ model_test_results = pd.DataFrame({'trueValue': main_scaled_df_test_y, \
 fpr, tpr, threshold = roc_curve(model_test_results.trueValue, \
                                 model_test_results.predictedValue)    
 
+
+
 roc_auc = auc(fpr, tpr)
 
 log_loss(main_scaled_df_test_y, model_pred_y)
 
-plt.title("ROC Curve. Area under Curve: {:.3f}".format(roc_auc))
-plt.xlabel('False Positive Rate')
+# plot ROC
+plt.title('Receiver Operating Characteristic (ROC)')
+plt.plot(fpr, tpr, 'b', label = 'AUC = %0.3f' %roc_auc)
+plt.legend(loc='lower right')
+plt.plot([0,1], [0,1], 'r--')
+plt.xlim([0.0,1.0])
+plt.ylim([0.0,1.0])
 plt.ylabel('True Positive Rate')
-_ = plt.plot(fpr, tpr, 'r')
+plt.xlabel('False Positive Rate')
+plt.show()
+
+print('AUC score:', roc_auc)
     
 ###############################
 # find median values for churn and no churn predction
